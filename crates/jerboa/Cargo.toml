@@ -1,0 +1,17 @@
+[package]
+name = "jerboa"
+version = "0.1.0"
+edition = "2021"
+readme = "README.md"
+license = "Apache-2.0"
+authors = ["Yang Chen <matthiasychen@gmail.com>"]
+homepage = "https://github.com/matthiascy/jerboa"
+repository = "https://github.com/matthiascy/jerboa"
+description = "Graphics library under development."
+keywords = ["graphics"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+byteorder = "1.4"
+chrono = "0.4"
