@@ -1,12 +1,13 @@
-use std::io::Read;
-use std::str::FromStr;
-use byteorder::ByteOrder;
-use crate::core::image::codec::pnm::error::Error;
-
+mod decode;
+mod encode;
 mod error;
+
+pub(crate) use decode::read_pnm_from_stream;
+pub(crate) use encode::write_pnm_to_stream;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum TupleType {
+    /// Black is encoded as 0 and white as 1.
     BlackAndWhite,
     GrayScale,
     Rgb,
@@ -15,144 +16,24 @@ pub enum TupleType {
     RgbAlpha,
     FloatGrayScale,
     FloatRgb,
+    /// Black is encoded as 1 and white as 0 (PBM format).
     BlackAndWhiteBit,
 }
 
-/// Represents a single value of a pixel in a PNM image.
-pub trait Sample: Sized {
-    /// Size of a sample in bytes.
-    const N_BYTES: usize;
-
-    /// Underlying type of the sample.
-    type Underlying;
-
-    /// Result obtained through parsing.
-    type ParsingRecord = Self::Underlying;
-
-    /// Parse a single sample from an ASCII string then write it into the given buffer.
-    fn parse_from_ascii(src: &str) -> Result<Self::Underlying, Error>;
-
-    /// Parse a single sample from a binary buffer (little endian).
-    fn parse_from_bytes_le(src: &[u8; Self::N_BYTES]) -> Result<Self::ParsingRecord, Error>;
-
-    /// Parse a single sample from a binary buffer (big endian).
-    fn parse_from_bytes_be(src: &[u8; Self::N_BYTES]) -> Result<Self::ParsingRecord, Error>;
-}
-
-/// Represent a bit sample in PBM file.
-/// Black is encoded as 1 and white as 0.
-#[derive(Debug)]
-pub struct Sbit;
-
-impl Sample for Sbit {
-    const N_BYTES: usize = 1;
-    type Underlying = u8;
-    type ParsingRecord = [u8; 8];
-
-    fn parse_from_ascii(src: &str) -> Result<u8, Error> {
-        src.parse::<u8>().map_err(Into::into)
+impl TupleType {
+    pub(crate) fn as_str(&self) -> &'static str {
+        match self {
+            TupleType::BlackAndWhite => "BLACKANDWHITE",
+            TupleType::GrayScale => "GRAYSCALE",
+            TupleType::Rgb => "RGB",
+            TupleType::BlackAndWhiteAlpha => "BLACKANDWHITE_ALPHA",
+            TupleType::GrayScaleAlpha => "GRAYSCALE_ALPHA",
+            TupleType::RgbAlpha => "RGB_ALPHA",
+            TupleType::FloatGrayScale => "FLOAT_GRAYSCALE",
+            TupleType::FloatRgb => "FLOAT_RGB",
+            TupleType::BlackAndWhiteBit => "BLACKANDWHITE_BIT",
+        }
     }
-
-    fn parse_from_bytes_le(src: &[u8; 1]) -> Result<[u8; 8], Error> {
-        // Each bit is encoded as a single byte.
-        let mut output = [0; 8];
-        output.iter_mut().enumerate().for_each(|(i, val)| {
-            *val = (((src[0] << i) & 128) >> 7) ^ 1;
-        });
-        Ok(output)
-    }
-
-    fn parse_from_bytes_be(src: &[u8; 1]) -> Result<[u8; 8], Error> {
-        Self::parse_from_bytes_le(src)
-    }
-}
-
-#[derive(Debug)]
-pub struct Su8;
-
-impl Sample for Su8 {
-    const N_BYTES: usize = 1;
-    type Underlying = u8;
-
-    fn parse_from_ascii(src: &str) -> Result<Self::Underlying, Error> {
-        src.parse::<u8>().map_err(Into::into)
-    }
-
-    fn parse_from_bytes_le(src: &[u8; Self::N_BYTES]) -> Result<Self::ParsingRecord, Error> {
-        Ok(src[0])
-    }
-
-    fn parse_from_bytes_be(src: &[u8; Self::N_BYTES]) -> Result<Self::ParsingRecord, Error> {
-        Self::parse_from_bytes_le(src)
-    }
-}
-
-#[derive(Debug)]
-pub struct Su16;
-
-impl Sample for Su16 {
-    const N_BYTES: usize = 2;
-    type Underlying = u16;
-
-    fn parse_from_ascii(src: &str) -> Result<Self::Underlying, Error> {
-        src.parse::<u16>().map_err(Into::into)
-    }
-
-    fn parse_from_bytes_le(src: &[u8; Self::N_BYTES]) -> Result<Self::ParsingRecord, Error> {
-        Ok(byteorder::LittleEndian::read_u16(src))
-    }
-
-    fn parse_from_bytes_be(src: &[u8; Self::N_BYTES]) -> Result<Self::ParsingRecord, Error> {
-        Ok(byteorder::BigEndian::read_u16(src))
-    }
-}
-
-#[derive(Debug)]
-pub struct Sf32;
-
-impl Sample for Sf32 {
-    const N_BYTES: usize = 4;
-    type Underlying = f32;
-
-    fn parse_from_ascii(src: &str) -> Result<Self::Underlying, Error> {
-        src.parse::<f32>().map_err(Into::into)
-    }
-
-    fn parse_from_bytes_le(src: &[u8; Self::N_BYTES]) -> Result<Self::ParsingRecord, Error> {
-        Ok(byteorder::LittleEndian::read_f32(src))
-    }
-
-    fn parse_from_bytes_be(src: &[u8; Self::N_BYTES]) -> Result<Self::ParsingRecord, Error> {
-        Ok(byteorder::BigEndian::read_f32(src))
-    }
-}
-
-pub trait Pixel {
-    const N_CHANNELS: usize;
-    const N_BYTES: usize;
-}
-
-macro_rules! define_pixel_types {
-    ($($name:ident, $n:expr);+) => {
-        $(
-            #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-            pub struct $name<S: Sample>([S; $n]);
-
-            impl<S: Sample> Pixel for $name<S> {
-                const N_CHANNELS: usize = $n;
-                const N_BYTES: usize = S::N_BYTES * Self::N_CHANNELS;
-            }
-        )+
-    };
-}
-
-define_pixel_types! {
-    Rgb, 3;
-    RgbA, 4;
-    Bw, 1;
-    BwA, 2;
-    Luma, 1;
-    LumaA, 2
 }
 
 /// Sample encoding
@@ -160,6 +41,21 @@ define_pixel_types! {
 pub enum Encoding {
     Ascii,
     Binary,
+}
+
+impl Encoding {
+    pub fn is_ascii(&self) -> bool {
+        match self {
+            Encoding::Ascii => true,
+            Encoding::Binary => false,
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Endian {
+    Big,
+    Little,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -176,7 +72,23 @@ impl Subtype {
     pub fn encoding(&self) -> Encoding {
         match self {
             Subtype::BitMap(e) | Subtype::GrayMap(e) | Subtype::PixMap(e) => *e,
-            Subtype::ArbitraryMap | Subtype::FloatGrayMap | Subtype::FloatPixMap => Encoding::Binary,
+            Subtype::ArbitraryMap | Subtype::FloatGrayMap | Subtype::FloatPixMap => {
+                Encoding::Binary
+            }
+        }
+    }
+
+    pub fn magic_number(&self) -> &'static str {
+        match self {
+            Subtype::BitMap(Encoding::Ascii) => "P1",
+            Subtype::GrayMap(Encoding::Ascii) => "P2",
+            Subtype::PixMap(Encoding::Ascii) => "P3",
+            Subtype::BitMap(Encoding::Binary) => "P4",
+            Subtype::GrayMap(Encoding::Binary) => "P5",
+            Subtype::PixMap(Encoding::Binary) => "P6",
+            Subtype::ArbitraryMap => "P7",
+            Subtype::FloatGrayMap => "Pf",
+            Subtype::FloatPixMap => "PF",
         }
     }
 
@@ -202,7 +114,8 @@ impl Subtype {
 }
 
 /// Generalised PNM header.
-pub struct Header {
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct Header {
     /// Subtype of the PNM file.
     pub subtype: Subtype,
 
@@ -224,44 +137,3 @@ pub struct Header {
     /// Specifies the kind of the image (for PAM files)
     pub tuple_type: TupleType,
 }
-
-impl Header {
-    /// Returns the number of bytes per sample (channel).
-    pub fn bytes_per_sample(&self) -> usize {
-        if self.subtype.is_float_map() {
-            4
-        } else if self.subtype.is_bit_map() {
-            1
-        } else {
-            // Calculate required byte size according to its max value.
-            (self.max_val.abs()).log(2.0).floor() as usize / 8 + 1
-        }
-    }
-
-    /// Returns the number of bytes per pixel.
-    pub fn bytes_per_pixel(&self) -> usize {
-        self.bytes_per_sample() * self.n_channels as usize
-    }
-}
-
-pub fn read_pnm_header(reader: &mut dyn Read) {
-    todo!();
-}
-//
-// pub fn read_pbm_header() {
-//     todo!()
-// }
-// pub fn read_pgm_header() {}
-// pub fn read_ppm_header() {}
-// pub fn read_pfm_header() {}
-// pub fn read_pam_header() {}
-//
-// pub fn read_pbm_data() {}
-// pub fn read_pgm_data() {}
-// pub fn read_ppm_data() {}
-// pub fn read_pfm_data() {}
-//
-// pub fn write_pbm_file() {}
-// pub fn write_pgm_file() {}
-// pub fn write_ppm_file() {}
-// pub fn write_pfm_file() {}
