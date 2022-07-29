@@ -452,68 +452,68 @@ pub(crate) fn read_pnm_from_stream<R: BufRead>(stream: &mut R) -> Result<ImageBu
     let encoding = header.subtype.encoding();
     let endian = header.endian();
     match (header.tuple_type, header.bytes_per_channel()) {
-        (TupleType::BlackAndWhiteBit, _) => Ok(ImageBuffer::Bitmap(PixelBuffer {
-            width: header.width,
-            height: header.height,
-            pixels: read_samples::<Bit, R>(stream, n_samples, encoding, None)?,
-        })),
+        (TupleType::BlackAndWhiteBit, _) => Ok(ImageBuffer::Bitmap(PixelBuffer::from_samples(
+            header.width,
+            header.height,
+            read_samples::<Bit, R>(stream, n_samples, encoding, None)?,
+        ))),
         (TupleType::BlackAndWhite, 1) | (TupleType::GrayScale, 1) => {
-            Ok(ImageBuffer::Luma8(PixelBuffer {
-                width: header.width,
-                height: header.height,
-                pixels: read_samples::<u8, R>(stream, n_samples, encoding, Some(endian))?,
-            }))
+            Ok(ImageBuffer::Luma8(PixelBuffer::from_samples(
+                header.width,
+                header.height,
+                read_samples::<u8, R>(stream, n_samples, encoding, Some(endian))?,
+            )))
         }
-        (TupleType::BlackAndWhiteAlpha, 1) => Ok(ImageBuffer::LumaA8(PixelBuffer {
-            width: header.width,
-            height: header.height,
-            pixels: read_samples::<u8, R>(stream, n_samples, encoding, Some(endian))?,
-        })),
-        (TupleType::GrayScale, 2) => Ok(ImageBuffer::Luma16(PixelBuffer {
-            width: header.width,
-            height: header.height,
-            pixels: read_samples::<u16, R>(stream, n_samples, encoding, Some(endian))?,
-        })),
-        (TupleType::GrayScaleAlpha, 1) => Ok(ImageBuffer::LumaA8(PixelBuffer {
-            width: header.width,
-            height: header.height,
-            pixels: read_samples::<u8, R>(stream, n_samples, encoding, Some(endian))?,
-        })),
-        (TupleType::GrayScaleAlpha, 2) => Ok(ImageBuffer::LumaA16(PixelBuffer {
-            width: header.width,
-            height: header.height,
-            pixels: read_samples::<u16, R>(stream, n_samples, encoding, Some(endian))?,
-        })),
-        (TupleType::Rgb, 1) => Ok(ImageBuffer::Rgb8(PixelBuffer {
-            width: header.width,
-            height: header.height,
-            pixels: read_samples::<u8, R>(stream, n_samples, encoding, Some(endian))?,
-        })),
-        (TupleType::Rgb, 2) => Ok(ImageBuffer::Rgb16(PixelBuffer {
-            width: header.width,
-            height: header.height,
-            pixels: read_samples::<u16, R>(stream, n_samples, encoding, Some(endian))?,
-        })),
-        (TupleType::RgbAlpha, 1) => Ok(ImageBuffer::RgbA8(PixelBuffer {
-            width: header.width,
-            height: header.height,
-            pixels: read_samples::<u8, R>(stream, n_samples, encoding, Some(endian))?,
-        })),
-        (TupleType::RgbAlpha, 2) => Ok(ImageBuffer::RgbA16(PixelBuffer {
-            width: header.width,
-            height: header.height,
-            pixels: read_samples::<u16, R>(stream, n_samples, encoding, Some(endian))?,
-        })),
-        (TupleType::FloatGrayScale, 4) => Ok(ImageBuffer::Luma32F(PixelBuffer {
-            width: header.width,
-            height: header.height,
-            pixels: read_samples::<f32, R>(stream, n_samples, encoding, Some(endian))?,
-        })),
-        (TupleType::FloatRgb, 4) => Ok(ImageBuffer::Rgb32F(PixelBuffer {
-            width: header.width,
-            height: header.height,
-            pixels: read_samples::<f32, R>(stream, n_samples, encoding, Some(endian))?,
-        })),
+        (TupleType::BlackAndWhiteAlpha, 1) => Ok(ImageBuffer::LumaA8(PixelBuffer::from_samples(
+            header.width,
+            header.height,
+            read_samples::<u8, R>(stream, n_samples, encoding, Some(endian))?,
+        ))),
+        (TupleType::GrayScale, 2) => Ok(ImageBuffer::Luma16(PixelBuffer::from_samples(
+            header.width,
+            header.height,
+            read_samples::<u16, R>(stream, n_samples, encoding, Some(endian))?,
+        ))),
+        (TupleType::GrayScaleAlpha, 1) => Ok(ImageBuffer::LumaA8(PixelBuffer::from_samples(
+            header.width,
+            header.height,
+            read_samples::<u8, R>(stream, n_samples, encoding, Some(endian))?,
+        ))),
+        (TupleType::GrayScaleAlpha, 2) => Ok(ImageBuffer::LumaA16(PixelBuffer::from_samples(
+            header.width,
+            header.height,
+            read_samples::<u16, R>(stream, n_samples, encoding, Some(endian))?,
+        ))),
+        (TupleType::Rgb, 1) => Ok(ImageBuffer::Rgb8(PixelBuffer::from_samples(
+            header.width,
+            header.height,
+            read_samples::<u8, R>(stream, n_samples, encoding, Some(endian))?,
+        ))),
+        (TupleType::Rgb, 2) => Ok(ImageBuffer::Rgb16(PixelBuffer::from_samples(
+            header.width,
+            header.height,
+            read_samples::<u16, R>(stream, n_samples, encoding, Some(endian))?,
+        ))),
+        (TupleType::RgbAlpha, 1) => Ok(ImageBuffer::RgbA8(PixelBuffer::from_samples(
+            header.width,
+            header.height,
+            read_samples::<u8, R>(stream, n_samples, encoding, Some(endian))?,
+        ))),
+        (TupleType::RgbAlpha, 2) => Ok(ImageBuffer::RgbA16(PixelBuffer::from_samples(
+            header.width,
+            header.height,
+            read_samples::<u16, R>(stream, n_samples, encoding, Some(endian))?,
+        ))),
+        (TupleType::FloatGrayScale, 4) => Ok(ImageBuffer::Luma32F(PixelBuffer::from_samples(
+            header.width,
+            header.height,
+            read_samples::<f32, R>(stream, n_samples, encoding, Some(endian))?,
+        ))),
+        (TupleType::FloatRgb, 4) => Ok(ImageBuffer::Rgb32F(PixelBuffer::from_samples(
+            header.width,
+            header.height,
+            read_samples::<f32, R>(stream, n_samples, encoding, Some(endian))?,
+        ))),
         _ => Err(ImageError::Decoding(DecodingError::new(
             ImageFormat::Pnm,
             PnmError::UnmatchedTupleTypeAndPixelSize(header.tuple_type, header.bytes_per_channel()),

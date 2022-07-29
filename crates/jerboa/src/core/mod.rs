@@ -4,16 +4,16 @@ pub mod error;
 pub mod image;
 
 #[derive(Debug, Copy, Clone)]
-pub struct Vec1<T>(pub [T; 1]);
+pub struct Vec1<T>([T; 1]);
 
 #[derive(Debug, Copy, Clone)]
-pub struct Vec2<T>(pub [T; 2]);
+pub struct Vec2<T>([T; 2]);
 
 #[derive(Debug, Copy, Clone)]
-pub struct Vec3<T>(pub [T; 3]);
+pub struct Vec3<T>([T; 3]);
 
 #[derive(Debug, Copy, Clone)]
-pub struct Vec4<T>(pub [T; 4]);
+pub struct Vec4<T>([T; 4]);
 
 macro_rules! impl_deref {
     ($($name:ident<T> $n:expr;)*) => {
