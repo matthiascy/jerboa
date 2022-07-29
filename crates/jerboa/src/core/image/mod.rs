@@ -15,7 +15,6 @@ use std::{
     io::{BufRead, BufReader, BufWriter},
     ops::{Deref, DerefMut},
     path::Path,
-    slice,
 };
 
 pub mod codec;
@@ -74,41 +73,64 @@ impl Sample for f32 {
 
 pub trait Pixel: Copy + Clone + Default {
     /// Type of each channel.
-    type SampleType: Sample;
+    type Subpixel: Sample;
+
     /// Number of channels in the pixel.
     const N_CHANNELS: usize;
+
     /// Size of a pixel in bytes.
-    const N_BYTES: usize = Self::N_CHANNELS * Self::SampleType::N_BYTES;
+    const N_BYTES: usize = Self::N_CHANNELS * Self::Subpixel::N_BYTES;
+
+    /// Returns a view of the pixel into a slice.
+    fn from_slice(slice: &[Self::Subpixel]) -> &Self;
+
+    /// Returns a mutable view of the pixel into a slice.
+    fn from_slice_mut(slice: &mut [Self::Subpixel]) -> &mut Self;
 }
 
 macro_rules! impl_pixel_trait {
-    ($($name:ident<T> { $channels:expr };)*) => {
+    ($($name:ident<S> { $channels:expr };)*) => {
         $(
-            impl<T: Sample> Pixel for $name<T> {
-                type SampleType = T;
+            impl<S: Sample> Pixel for $name<S> {
+                type Subpixel = S;
+
                 const N_CHANNELS: usize = $channels;
+
+                fn from_slice(slice: &[S]) -> &Self {
+                    assert_eq!(slice.len(), Self::N_CHANNELS, "slice length mismatch while creating pixel view from slice");
+                    unsafe {
+                        &*(slice as *const [S] as *const Self)
+                    }
+                }
+
+                fn from_slice_mut(slice: &mut [S]) -> &mut Self {
+                    assert_eq!(slice.len(), Self::N_CHANNELS, "slice length mismatch while creating pixel view from slice");
+                    unsafe {
+                        &mut *(slice as *mut [S] as *mut Self)
+                    }
+                }
             }
         )*
     };
 }
 
 impl_pixel_trait! {
-    Vec1<T> { 1 }; Vec2<T> { 2 }; Vec3<T> { 3 }; Vec4<T> { 4 };
+    Vec1<S> { 1 }; Vec2<S> { 2 }; Vec3<S> { 3 }; Vec4<S> { 4 };
 }
 
 #[repr(C)]
 #[derive(Debug, Clone)]
-pub struct PixelBuffer<P> {
+pub struct PixelBuffer<P: Pixel> {
     width: u32,
     height: u32,
-    pixels: Vec<P>,
+    pixels: Vec<P::Subpixel>,
 }
 
 pub type PixelBufferRgb8 = PixelBuffer<Vec3<u8>>;
 pub type PixelBufferRgb16 = PixelBuffer<Vec3<u16>>;
 pub type PixelBufferRgb32f = PixelBuffer<Vec3<f32>>;
 
-impl<P> PixelBuffer<P> {
+impl<P: Pixel> PixelBuffer<P> {
     pub fn width(&self) -> u32 {
         self.width
     }
@@ -120,17 +142,12 @@ impl<P> PixelBuffer<P> {
     pub fn dimensions(&self) -> (u32, u32) {
         (self.width, self.height)
     }
-}
 
-impl<P> PixelBuffer<P>
-where
-    P: Pixel,
-{
     pub fn new(width: u32, height: u32) -> Self {
         PixelBuffer {
             width,
             height,
-            pixels: vec![P::default(); (width * height) as usize],
+            pixels: vec![P::Subpixel::default(); (width * height) as usize * P::N_CHANNELS],
         }
     }
 
@@ -138,29 +155,26 @@ where
         P::N_CHANNELS
     }
 
-    pub fn flat_samples(&self) -> &[P::SampleType] {
-        unsafe {
-            slice::from_raw_parts(
-                self.pixels.as_ptr() as *const P::SampleType,
-                self.pixels.len() * P::N_CHANNELS,
-            )
-        }
+    pub fn flat_pixels(&self) -> &[P::Subpixel] {
+        self.pixels.as_slice()
     }
 
     pub fn pixel_at(&self, x: u32, y: u32) -> Option<&P> {
         if x >= self.width || y >= self.height {
             return None;
         }
-        let index = (y * self.width + x) as usize;
-        Some(&self.pixels[index])
+        let index = (y * self.width + x) as usize * P::N_CHANNELS;
+        Option::from(P::from_slice(&self.pixels[index..index + P::N_CHANNELS]))
     }
 
     pub fn pixel_at_mut(&mut self, x: u32, y: u32) -> Option<&mut P> {
         if x >= self.width || y >= self.height {
             return None;
         }
-        let index = (y * self.width + x) as usize;
-        Some(&mut self.pixels[index])
+        let index = (y * self.width + x) as usize * P::N_CHANNELS;
+        Option::from(P::from_slice_mut(
+            &mut self.pixels[index..index + P::N_CHANNELS],
+        ))
     }
 }
 
@@ -184,7 +198,7 @@ impl PixelBuffer<Vec1<Bit>> {
             n_channels: 1,
             tuple_type: TupleType::BlackAndWhiteBit,
         };
-        pnm::write_pnm_to_stream::<Bit, _>(&mut writer, header, self.flat_samples())
+        pnm::write_pnm_to_stream::<Bit, _>(&mut writer, header, self.flat_pixels())
     }
 
     pub fn write_as_pam<P: AsRef<Path>>(&self, path: P) -> Result<(), ImageError> {
@@ -202,7 +216,7 @@ impl PixelBuffer<Vec1<Bit>> {
             n_channels: 1,
             tuple_type: TupleType::BlackAndWhite,
         };
-        let samples = self.flat_samples().iter().map(|x| x.0).collect::<Vec<_>>();
+        let samples = self.flat_pixels().iter().map(|x| x.0).collect::<Vec<_>>();
         pnm::write_pnm_to_stream::<u8, _>(&mut writer, header, &samples)
     }
 }
@@ -227,7 +241,7 @@ impl PixelBuffer<Vec1<u8>> {
             n_channels: 1,
             tuple_type: TupleType::GrayScale,
         };
-        pnm::write_pnm_to_stream::<u8, _>(&mut writer, header, self.flat_samples())
+        pnm::write_pnm_to_stream::<u8, _>(&mut writer, header, self.flat_pixels())
     }
 }
 
@@ -247,7 +261,7 @@ impl PixelBuffer<Vec1<f32>> {
             n_channels: 1,
             tuple_type: TupleType::FloatGrayScale,
         };
-        pnm::write_pnm_to_stream::<f32, _>(&mut writer, header, self.flat_samples())
+        pnm::write_pnm_to_stream::<f32, _>(&mut writer, header, self.flat_pixels())
     }
 }
 
@@ -271,7 +285,7 @@ impl PixelBuffer<Vec3<u8>> {
             n_channels: 3,
             tuple_type: TupleType::Rgb,
         };
-        pnm::write_pnm_to_stream::<u8, _>(&mut writer, header, self.flat_samples())
+        pnm::write_pnm_to_stream::<u8, _>(&mut writer, header, self.flat_pixels())
     }
 }
 
@@ -295,7 +309,7 @@ impl PixelBuffer<Vec3<u16>> {
             n_channels: 3,
             tuple_type: TupleType::Rgb,
         };
-        pnm::write_pnm_to_stream::<u16, _>(&mut writer, header, self.flat_samples())
+        pnm::write_pnm_to_stream::<u16, _>(&mut writer, header, self.flat_pixels())
     }
 }
 
@@ -320,7 +334,7 @@ macro_rules! impl_write_as_pam {
                         n_channels: $n,
                         tuple_type: $tupltype,
                     };
-                    pnm::write_pnm_to_stream::<$s, _>(&mut writer, header, self.flat_samples())
+                    pnm::write_pnm_to_stream::<$s, _>(&mut writer, header, self.flat_pixels())
                 }
             }
         )*
@@ -343,7 +357,7 @@ impl PixelBuffer<Vec3<f32>> {
             n_channels: 3,
             tuple_type: TupleType::FloatRgb,
         };
-        pnm::write_pnm_to_stream::<f32, _>(&mut writer, header, self.flat_samples())
+        pnm::write_pnm_to_stream::<f32, _>(&mut writer, header, self.flat_pixels())
     }
 }
 

@@ -1,10 +1,7 @@
-use crate::core::{
-    image::{
-        codec::pnm::{Encoding, Endian, Header, Subtype, TupleType},
-        error::{DecodingError, EncodingError, ImageError, ParseError},
-        Bit, ImageBuffer, ImageFormat, PixelBuffer, Sample,
-    },
-    Vec1, Vec2, Vec3, Vec4,
+use crate::core::image::{
+    codec::pnm::{Encoding, Endian, Header, Subtype, TupleType},
+    error::{DecodingError, EncodingError, ImageError, ParseError},
+    Bit, ImageBuffer, ImageFormat, PixelBuffer, Sample,
 };
 use std::io::{BufRead, Read};
 
@@ -455,123 +452,68 @@ pub(crate) fn read_pnm_from_stream<R: BufRead>(stream: &mut R) -> Result<ImageBu
     let encoding = header.subtype.encoding();
     let endian = header.endian();
     match (header.tuple_type, header.bytes_per_channel()) {
-        (TupleType::BlackAndWhiteBit, _) => {
-            let samples = read_samples::<Bit, R>(stream, n_samples, encoding, None)?;
-            Ok(ImageBuffer::Bitmap(PixelBuffer {
-                width: header.width,
-                height: header.height,
-                pixels: samples
-                    .chunks(1)
-                    .map(|s| {
-                        let val = if s[0] == Bit(0) { Bit(1) } else { Bit(0) };
-                        Vec1([val])
-                    })
-                    .collect(),
-            }))
-        }
+        (TupleType::BlackAndWhiteBit, _) => Ok(ImageBuffer::Bitmap(PixelBuffer {
+            width: header.width,
+            height: header.height,
+            pixels: read_samples::<Bit, R>(stream, n_samples, encoding, None)?,
+        })),
         (TupleType::BlackAndWhite, 1) | (TupleType::GrayScale, 1) => {
-            let samples = read_samples::<u8, R>(stream, n_samples, encoding, Some(endian))?;
             Ok(ImageBuffer::Luma8(PixelBuffer {
                 width: header.width,
                 height: header.height,
-                pixels: samples.chunks(1).map(|s| Vec1([s[0]])).collect(),
+                pixels: read_samples::<u8, R>(stream, n_samples, encoding, Some(endian))?,
             }))
         }
-        (TupleType::BlackAndWhiteAlpha, 1) => {
-            let samples = read_samples::<u8, R>(stream, n_samples, encoding, Some(endian))?;
-            Ok(ImageBuffer::LumaA8(PixelBuffer {
-                width: header.width,
-                height: header.height,
-                pixels: samples.chunks(2).map(|s| Vec2([s[0], s[1]])).collect(),
-            }))
-        }
-        (TupleType::GrayScale, 2) => {
-            let samples = read_samples::<u16, R>(stream, n_samples, encoding, Some(endian))?;
-            Ok(ImageBuffer::Luma16(PixelBuffer {
-                width: header.width,
-                height: header.height,
-                pixels: samples.chunks(1).map(|s| Vec1([s[0]])).collect(),
-            }))
-        }
-        (TupleType::GrayScaleAlpha, 1) => {
-            let samples = read_samples::<u8, R>(stream, n_samples, encoding, Some(endian))?;
-            Ok(ImageBuffer::LumaA8(PixelBuffer {
-                width: header.width,
-                height: header.height,
-                pixels: samples.chunks(2).map(|s| Vec2([s[0], s[1]])).collect(),
-            }))
-        }
-        (TupleType::GrayScaleAlpha, 2) => {
-            let samples = read_samples::<u16, R>(stream, n_samples, encoding, Some(endian))?;
-            Ok(ImageBuffer::LumaA16(PixelBuffer {
-                width: header.width,
-                height: header.height,
-                pixels: samples.chunks(2).map(|s| Vec2([s[0], s[1]])).collect(),
-            }))
-        }
-        (TupleType::Rgb, 1) => {
-            let samples = read_samples::<u8, R>(stream, n_samples, encoding, Some(endian))?;
-            Ok(ImageBuffer::Rgb8(PixelBuffer {
-                width: header.width,
-                height: header.height,
-                pixels: samples
-                    .chunks(3)
-                    .map(|s| Vec3([s[0], s[1], s[2]]))
-                    .collect(),
-            }))
-        }
-        (TupleType::Rgb, 2) => {
-            let samples = read_samples::<u16, R>(stream, n_samples, encoding, Some(endian))?;
-            Ok(ImageBuffer::Rgb16(PixelBuffer {
-                width: header.width,
-                height: header.height,
-                pixels: samples
-                    .chunks(3)
-                    .map(|s| Vec3([s[0], s[1], s[2]]))
-                    .collect(),
-            }))
-        }
-        (TupleType::RgbAlpha, 1) => {
-            let samples = read_samples::<u8, R>(stream, n_samples, encoding, Some(endian))?;
-            Ok(ImageBuffer::RgbA8(PixelBuffer {
-                width: header.width,
-                height: header.height,
-                pixels: samples
-                    .chunks(4)
-                    .map(|s| Vec4([s[0], s[1], s[2], s[3]]))
-                    .collect(),
-            }))
-        }
-        (TupleType::RgbAlpha, 2) => {
-            let samples = read_samples::<u16, R>(stream, n_samples, encoding, Some(endian))?;
-            Ok(ImageBuffer::RgbA16(PixelBuffer {
-                width: header.width,
-                height: header.height,
-                pixels: samples
-                    .chunks(4)
-                    .map(|s| Vec4([s[0], s[1], s[2], s[3]]))
-                    .collect(),
-            }))
-        }
-        (TupleType::FloatGrayScale, 4) => {
-            let samples = read_samples::<f32, R>(stream, n_samples, encoding, Some(endian))?;
-            Ok(ImageBuffer::Luma32F(PixelBuffer {
-                width: header.width,
-                height: header.height,
-                pixels: samples.chunks(1).map(|s| Vec1([s[0]])).collect(),
-            }))
-        }
-        (TupleType::FloatRgb, 4) => {
-            let samples = read_samples::<f32, R>(stream, n_samples, encoding, Some(endian))?;
-            Ok(ImageBuffer::Rgb32F(PixelBuffer {
-                width: header.width,
-                height: header.height,
-                pixels: samples
-                    .chunks(3)
-                    .map(|s| Vec3([s[0], s[1], s[2]]))
-                    .collect(),
-            }))
-        }
+        (TupleType::BlackAndWhiteAlpha, 1) => Ok(ImageBuffer::LumaA8(PixelBuffer {
+            width: header.width,
+            height: header.height,
+            pixels: read_samples::<u8, R>(stream, n_samples, encoding, Some(endian))?,
+        })),
+        (TupleType::GrayScale, 2) => Ok(ImageBuffer::Luma16(PixelBuffer {
+            width: header.width,
+            height: header.height,
+            pixels: read_samples::<u16, R>(stream, n_samples, encoding, Some(endian))?,
+        })),
+        (TupleType::GrayScaleAlpha, 1) => Ok(ImageBuffer::LumaA8(PixelBuffer {
+            width: header.width,
+            height: header.height,
+            pixels: read_samples::<u8, R>(stream, n_samples, encoding, Some(endian))?,
+        })),
+        (TupleType::GrayScaleAlpha, 2) => Ok(ImageBuffer::LumaA16(PixelBuffer {
+            width: header.width,
+            height: header.height,
+            pixels: read_samples::<u16, R>(stream, n_samples, encoding, Some(endian))?,
+        })),
+        (TupleType::Rgb, 1) => Ok(ImageBuffer::Rgb8(PixelBuffer {
+            width: header.width,
+            height: header.height,
+            pixels: read_samples::<u8, R>(stream, n_samples, encoding, Some(endian))?,
+        })),
+        (TupleType::Rgb, 2) => Ok(ImageBuffer::Rgb16(PixelBuffer {
+            width: header.width,
+            height: header.height,
+            pixels: read_samples::<u16, R>(stream, n_samples, encoding, Some(endian))?,
+        })),
+        (TupleType::RgbAlpha, 1) => Ok(ImageBuffer::RgbA8(PixelBuffer {
+            width: header.width,
+            height: header.height,
+            pixels: read_samples::<u8, R>(stream, n_samples, encoding, Some(endian))?,
+        })),
+        (TupleType::RgbAlpha, 2) => Ok(ImageBuffer::RgbA16(PixelBuffer {
+            width: header.width,
+            height: header.height,
+            pixels: read_samples::<u16, R>(stream, n_samples, encoding, Some(endian))?,
+        })),
+        (TupleType::FloatGrayScale, 4) => Ok(ImageBuffer::Luma32F(PixelBuffer {
+            width: header.width,
+            height: header.height,
+            pixels: read_samples::<f32, R>(stream, n_samples, encoding, Some(endian))?,
+        })),
+        (TupleType::FloatRgb, 4) => Ok(ImageBuffer::Rgb32F(PixelBuffer {
+            width: header.width,
+            height: header.height,
+            pixels: read_samples::<f32, R>(stream, n_samples, encoding, Some(endian))?,
+        })),
         _ => Err(ImageError::Decoding(DecodingError::new(
             ImageFormat::Pnm,
             PnmError::UnmatchedTupleTypeAndPixelSize(header.tuple_type, header.bytes_per_channel()),
@@ -803,7 +745,6 @@ mod tests {
                         n_channels: $c,
                         tuple_type: $tupltype,
                     };
-                    println!("is success: {}", success);
                     for (parsed, expected) in parsed_samples.iter().zip(samples.iter()) {
                         success &= parsed.0 == 1 - expected.0;
                     }

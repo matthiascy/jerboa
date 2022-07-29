@@ -3,14 +3,14 @@ use crate::core::image::{
     error::{EncodingError, ImageError},
     ImageFormat,
 };
-use std::io::{Error, Write};
+use std::io;
 
-fn map_io_error_encoding(err: Error) -> ImageError {
+fn map_io_error_encoding(err: io::Error) -> ImageError {
     ImageError::Encoding(EncodingError::new(ImageFormat::Pnm, err))
 }
 
 impl Header {
-    pub fn encode<W: Write>(&self, w: &mut W) -> Result<(), ImageError> {
+    pub fn encode<W: io::Write>(&self, w: &mut W) -> Result<(), ImageError> {
         let header_string = match self.subtype {
             Subtype::BitMap(_) => {
                 format!(
@@ -55,13 +55,12 @@ impl Header {
     }
 }
 
-pub(crate) fn write_pnm_to_stream<S: PnmSample, W: Write>(
+pub(crate) fn write_pnm_to_stream<S: PnmSample, W: io::Write>(
     stream: &mut W,
     header: Header,
     samples: &[S],
 ) -> Result<(), ImageError> {
     header.encode(stream)?;
-
     match header.subtype.encoding() {
         Encoding::Ascii => {
             for (i, sample) in samples.iter().enumerate() {
