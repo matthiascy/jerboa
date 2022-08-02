@@ -34,19 +34,24 @@ fn map_io_error_decoding(err: std::io::Error) -> ImageError {
 
 /// Represents a single value of a pixel in a PNM image.
 pub trait PnmSample: Sample {
-    /// Parse a single sample from an ASCII string then write it into the given buffer.
+    /// Parse a single sample from an ASCII string then write it into the given
+    /// buffer.
     fn decode_ascii(src: &str, dst: &mut [Self]) -> Result<(), ImageError>;
 
-    /// Parse samples from a binary buffer (little endian).
+    /// Parse samples from a binary buffer (little endian) then write them into
+    /// the given buffer.
     fn decode_le_bytes(src: &[u8], dst: &mut [Self]) -> Result<(), ImageError>;
 
-    /// Parse samples from a binary buffer (big endian).
+    /// Parse samples from a binary buffer (big endian) then write them into
+    /// the given buffer.
     fn decode_be_bytes(src: &[u8], dst: &mut [Self]) -> Result<(), ImageError>;
 
-    /// Encode samples into a binary buffer (little endian).
+    /// Encode samples into a binary buffer (little endian) then write them
+    /// into the given buffer.
     fn encode_le_bytes(src: &[Self], dst: &mut [u8]) -> Result<(), ImageError>;
 
-    /// Encode samples into a binary buffer (big endian).
+    /// Encode samples into a binary buffer (big endian) then write them into
+    /// the given buffer.
     fn encode_be_bytes(src: &[Self], dst: &mut [u8]) -> Result<(), ImageError>;
 }
 

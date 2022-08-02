@@ -2,6 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 pub mod error;
 pub mod image;
+pub mod rounding;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Vec1<T>([T; 1]);
