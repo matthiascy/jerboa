@@ -148,3 +148,13 @@ where
         ))
     }
 }
+
+/// Iterator over a block of pixels (reference) with coordinates.
+#[derive(Debug)]
+pub struct Blocks<'a, P: Pixel + 'a>
+    where
+        P::Subpixel: 'a,
+{
+    index: (u32, u32),
+    chunks: ChunksExact<'a, P::Subpixel>,
+}

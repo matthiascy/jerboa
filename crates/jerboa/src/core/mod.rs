@@ -1,7 +1,10 @@
 use std::ops::{Deref, DerefMut};
 
+pub mod axis;
+pub mod bounds;
 pub mod error;
 pub mod image;
+pub mod num;
 pub mod rounding;
 
 #[derive(Debug, Copy, Clone)]
@@ -43,4 +46,10 @@ macro_rules! impl_deref {
 
 impl_deref! {
     Vec1<T> 1; Vec2<T> 2; Vec3<T> 3; Vec4<T> 4;
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum Angle<T> {
+    Deg(T),
+    Rad(T),
 }

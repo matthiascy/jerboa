@@ -1,5 +1,6 @@
 use glam::Vec3;
 
+#[derive(Debug)]
 pub struct Ray {
     /// The origin of the ray.
     pub o: Vec3,
@@ -13,6 +14,7 @@ pub struct Ray {
 
 impl Ray {
     pub fn new(o: Vec3, d: Vec3) -> Self {
+        let d = d.normalize();
         Ray {
             o,
             d,
