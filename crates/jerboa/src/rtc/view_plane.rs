@@ -14,9 +14,15 @@ pub struct ViewPlane {
 }
 
 impl ViewPlane {
-    /// Creates a new view plane with the given horizontal and vertical resolution.
+    /// Creates a new view plane with the given horizontal and vertical
+    /// resolution.
     pub fn new(h_res: u32, v_res: u32, gamma: f32) -> Self {
-        ViewPlane { h_res, v_res, gamma, inv_gamma: 1.0 / gamma }
+        ViewPlane {
+            h_res,
+            v_res,
+            gamma,
+            inv_gamma: 1.0 / gamma,
+        }
     }
 
     /// Returns the horizontal resolution of the view plane.

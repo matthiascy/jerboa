@@ -1,7 +1,4 @@
-use crate::rtc::color::RgbColor;
-use crate::rtc::integrator::Integrator;
-use crate::rtc::ray::Ray;
-use crate::rtc::scene::Scene;
+use crate::rtc::{color::RgbColor, integrator::Integrator, ray::Ray, scene::Scene};
 
 #[derive(Debug)]
 pub struct RayCastIntegrator {}

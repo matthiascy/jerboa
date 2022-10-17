@@ -7,3 +7,4 @@
 
 pub mod core;
 pub mod rtc;
+pub mod rts;

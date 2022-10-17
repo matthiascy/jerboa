@@ -1,14 +1,13 @@
+pub mod camera;
+pub mod color;
 mod integrator;
 mod ray;
-pub mod shape;
 pub mod scene;
-pub mod color;
+pub mod shape;
 pub mod view_plane;
-pub mod camera;
 
-use crate::rtc::ray::Ray;
+use crate::rtc::{ray::Ray, shape::Shape};
 use glam::Vec3;
-use crate::rtc::shape::Shape;
 
 #[derive(Debug)]
 pub struct IntersectRecord {

@@ -44,11 +44,7 @@ impl Shape for Plane {
                 return None;
             }
             let p = ray.o + ray.d * t;
-            Some(IntersectRecord {
-                t,
-                p,
-                n: self.n,
-            })
+            Some(IntersectRecord { t, p, n: self.n })
         }
     }
 }

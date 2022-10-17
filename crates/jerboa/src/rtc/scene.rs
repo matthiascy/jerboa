@@ -1,7 +1,5 @@
+use crate::rtc::{integrator::Integrator, shape::Sphere, view_plane::ViewPlane};
 use glam::Vec3;
-use crate::rtc::integrator::Integrator;
-use crate::rtc::shape::Sphere;
-use crate::rtc::view_plane::ViewPlane;
 
 pub struct Scene {
     pub view_plane: ViewPlane,

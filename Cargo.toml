@@ -1,4 +1,7 @@
 [workspace]
 members = [
 	"crates/jerboa",
+	"crates/jerboa-linalg",
+	"crates/jerboa-rtc",
+	"crates/jerboa-srr",
 ]

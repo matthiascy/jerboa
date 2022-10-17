@@ -1,5 +1,3 @@
 pub mod pinhole;
 
-pub trait Camera {
-
-}
+pub trait Camera {}

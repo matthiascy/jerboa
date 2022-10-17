@@ -1,8 +1,5 @@
-use crate::core::Angle;
+use crate::rtc::{ray::Ray, shape::Shape, IntersectRecord};
 use glam::Vec3;
-use crate::rtc::IntersectRecord;
-use crate::rtc::ray::Ray;
-use crate::rtc::shape::Shape;
 
 #[derive(Debug)]
 pub struct Sphere {
@@ -47,11 +44,7 @@ impl Shape for Sphere {
             if t >= 0.0 {
                 let p = ray.o + ray.d * t;
                 let n = (p - self.c).normalize();
-                Some(IntersectRecord {
-                    t,
-                    p,
-                    n,
-                })
+                Some(IntersectRecord { t, p, n })
             } else {
                 None
             }

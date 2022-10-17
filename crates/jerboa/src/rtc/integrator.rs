@@ -1,6 +1,4 @@
-use crate::rtc::color::RgbColor;
-use crate::rtc::ray::Ray;
-use crate::rtc::scene::Scene;
+use crate::rtc::{color::RgbColor, ray::Ray, scene::Scene};
 
 mod ray_cast;
 

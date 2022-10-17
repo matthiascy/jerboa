@@ -1,4 +1,4 @@
-use crate::core::num::MachineEpsilon;
+use linalg::MachineEpsilon;
 
 /// Computes the magnitude of the conservative bounding of the relative error.
 /// (1 \pm \epsilon_m) ^ n.
