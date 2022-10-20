@@ -14,5 +14,6 @@
 mod array;
 mod num;
 mod packet;
+mod inner;
 
 pub use num::MachineEpsilon;
