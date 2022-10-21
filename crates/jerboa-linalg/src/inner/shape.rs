@@ -1,9 +1,32 @@
 use std::marker::PhantomData;
 
+pub trait ShapeStorage {
+    fn as_slice(&self) -> &[usize];
+}
+
+macro impl_shape_storage($($n:expr),+) {
+    $(
+        impl ShapeUnderlyingType for [usize; $n] {
+            fn as_slice(&self) -> &[usize] {
+                self
+            }
+        }
+    )+
+}
+
+impl_shape_storage!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
+
+impl ShapeStorage for Vec<usize> {
+    fn as_slice(&self) -> &[usize] {
+        self
+    }
+}
+
+
 /// Trait for array shape.
 pub trait Shape {
     /// Underlying shape storage type.
-    type Type;
+    type Type: ShapeStorage;
 
     /// Returns the value of storage type.
     fn shape() -> Self::Type;
@@ -36,10 +59,10 @@ pub trait FixedShape: Shape {
 }
 
 impl Shape for () {
-    type Type = ();
+    type Type = [usize; 0];
 
     fn shape() -> Self::Type {
-        ()
+        [0; 0]
     }
 }
 
@@ -126,10 +149,10 @@ impl Shape for ShapeDyn {
 
 /// Macro facilitating the creation of a `ShapeConst`.
 pub macro cs {
-($n:expr) => {
+    ($n:expr) => {
         ShapeConst<(), $n>
     },
-($n:expr, $($tail:expr),*) => {
+    ($n:expr, $($tail:expr),*) => {
         ShapeConst<cs!($($tail),*), $n>
     }
 }
