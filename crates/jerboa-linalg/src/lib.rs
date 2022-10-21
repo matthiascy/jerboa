@@ -5,15 +5,13 @@
 #![feature(const_intoiterator_identity)]
 #![feature(mem_copy_fn)]
 #![feature(decl_macro)]
-
-// todo: rewrite some of the code to use const_trait_impl,
-// const_fn_floating_point_arithmetic and const_float_classify
-
-// - [TODO] const_trait_impl once it's stable
+#![feature(generic_const_exprs)]
+#![feature(const_trait_impl)]
 
 mod array;
-mod num;
-mod packet;
+mod axis;
 mod inner;
+pub mod num;
 
-pub use num::MachineEpsilon;
+pub use array::*;
+pub use axis::Axis3;

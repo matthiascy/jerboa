@@ -7,6 +7,7 @@ use std::{
 /// ```text
 /// x + 0 = x for all x ∈ 𝑭ⁿ
 /// ```
+#[const_trait]
 pub trait Zero: Sized {
     /// Returns the additive identity.
     fn zero() -> Self;
@@ -15,10 +16,9 @@ pub trait Zero: Sized {
     fn is_zero(&self) -> bool;
 }
 
-// TODO: const fn
 /// Returns the additive identity.
 #[inline(always)]
-pub fn zero<T: Zero>() -> T {
+pub const fn zero<T: ~const Zero>() -> T {
     T::zero()
 }
 
@@ -26,6 +26,7 @@ pub fn zero<T: Zero>() -> T {
 /// ```text
 /// x * 1 = x for all x ∈ 𝑭ⁿ
 /// ```
+#[const_trait]
 pub trait One: Sized {
     /// Returns the multiplicative identity.
     fn one() -> Self;
@@ -37,7 +38,7 @@ pub trait One: Sized {
 // TODO: const fn
 /// Returns the multiplicative identity.
 #[inline(always)]
-pub fn one<T: One>() -> T {
+pub const fn one<T: ~const One>() -> T {
     T::one()
 }
 
@@ -81,8 +82,7 @@ impl MachineEpsilon for f64 {
 
 pub trait Integral: Num {}
 
-pub trait Floating: Num + MachineEpsilon // + Sqrt<Output = Self> + Abs<Output = Self>
-{
+pub trait Floating: Num + MachineEpsilon {
     fn recip(self) -> Self;
     fn nan() -> Self;
     fn inf() -> Self;
