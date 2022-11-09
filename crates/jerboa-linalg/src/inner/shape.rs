@@ -6,7 +6,7 @@ pub trait ShapeStorage {
 
 macro impl_shape_storage($($n:expr),+) {
     $(
-        impl ShapeUnderlyingType for [usize; $n] {
+        impl ShapeStorage for [usize; $n] {
             fn as_slice(&self) -> &[usize] {
                 self
             }

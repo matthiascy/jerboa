@@ -13,7 +13,5 @@ mod axis;
 mod inner;
 pub mod num;
 
-pub use inner::cs;
-
 pub use array::*;
 pub use axis::Axis3;

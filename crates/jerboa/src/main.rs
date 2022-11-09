@@ -18,16 +18,18 @@ enum Command {
     Raytrace,
     #[clap(name = "rts", about = "Render a scene using rasterization.")]
     Rasterize,
+    #[clap(name = "srr", about = "Render a scene using software rasterization.")]
+    SoftwareRasterize,
 }
 
 fn main() {
     let args = JerboaApp::parse();
     match &args.command {
         Some(Command::Rasterize) => {
-            println!("Rasterize"); // todo: remove
+            println!("Rasterize");
         }
         Some(Command::Raytrace) => {
-            println!("Raytrace"); // todo: remove
+            println!("Raytrace");
             let mut window = Window::new(
                 "Jerboa",
                 512,
@@ -67,6 +69,9 @@ fn main() {
                 window.update_with_buffer(&buffer, 512, 512).unwrap();
             }
         }
-        None => {}
+        Some(Command::SoftwareRasterize) => {
+            println!("SoftwareRasterize");
+        }
+        _ => {}
     }
 }

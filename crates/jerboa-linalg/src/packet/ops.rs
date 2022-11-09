@@ -1,5 +1,74 @@
-use crate::{num::Num, packet::Packet};
-use std::ops::*;
+use crate::{num::Num};
+use super::Packet;
+use core::ops::*;
+
+impl_packet_unary_op!(Neg);
+
+macro _impl_packet_binary_op_common_body($self:ident, $rhs:ident) {
+    {
+        let mut packet = $self;
+        packet.data.iter_mut().zip($rhs.data.iter())
+            .for_each(|(a, b)| *a = *a + *b);
+        packet
+    }
+}
+
+macro impl_packet_binary_op($($op_trait:ident)*) {
+    $(
+    )*
+}
+
+impl<T, const N: usize> Add for Packet<T, N>
+    where T: Add<Output = T> + Copy
+{
+    type Output = Packet<T, N>;
+
+    fn add(self, rhs: Packet<T, N>) -> Self::Output {
+        let mut packet = self;
+        packet.data.iter_mut().zip(rhs.data.iter())
+            .for_each(|(a, b)| *a = *a + *b);
+        packet
+    }
+}
+
+impl<'a, T, const N: usize> Add<&'a Packet<T, N>> for Packet<T, N>
+    where T: Add<Output = T> + Copy
+{
+    type Output = Packet<T, N>;
+
+    fn add(self, rhs: &'a Packet<T, N>) -> Self::Output {
+        let mut packet = self;
+        packet.data.iter_mut().zip(rhs.data.iter())
+            .for_each(|(a, b)| *a = *a + *b);
+        packet
+    }
+}
+
+impl<'a, 'b, T, const N: usize> Add<&'b Packet<T, N>> for &'b Packet<T, N>
+    where T: Add<Output = T> + Copy
+{
+    type Output = Packet<T, N>;
+
+    fn add(self, rhs: &'b Packet<T, N>) -> Self::Output {
+        let mut data = unsafe { core::mem::zeroed::<[T; N]>() };
+        data.iter_mut().zip(self.data.iter().zip(rhs.data.iter()))
+            .for_each(|(a, (b, c))| *a = *b + *c);
+        Packet::new(data)
+    }
+}
+
+impl<'a, T, const N: usize> Add<Packet<T, N>> for &'a Packet<T, N>
+    where T: Add<Output = T> + Copy
+{
+    type Output = Packet<T, N>;
+
+    fn add(self, rhs: Packet<T, N>) -> Self::Output {
+        let mut packet = rhs;
+        packet.data.iter_mut().zip(self.data.iter())
+            .for_each(|(a, b)| *a = *a + *b);
+        packet
+    }
+}
 
 /// Macro for implementing component wise binary operations for `Packet`.
 macro impl_packet_binary_op_component_wise {
@@ -149,32 +218,34 @@ macro impl_packet_binary_op_component_wise {
     }
 }
 
-macro impl_packet_unary_op_component_wise($op_trait:ident, $op:ident) {
-    impl<T: Num, const N: usize> $op_trait for Packet<T, N>
-    where
-        T: $op_trait<Output = T>,
-    {
-        type Output = Packet<T, N>;
+macro impl_packet_unary_op($($op_trait:ident),*) {
+    $(
+        paste::paste! {
+            impl<T, const N: usize> $op_trait for Packet<T, N>
+            where T: $op_trait<Output = T> + Copy
+            {
+                type Output = Packet<T, N>;
 
-        fn $op(self) -> Self::Output {
-            Packet::new(self.data.map(|x| x.$op()))
-        }
-    }
-
-    impl<'a, T: Num, const N: usize> $op_trait for &'a Packet<T, N>
-    where
-        T: $op_trait<Output = T>,
-    {
-        type Output = Packet<T, N>;
-
-        fn $op(self) -> Self::Output {
-            let mut data: [T; N] = unsafe { ::core::mem::zeroed() };
-            for (i, x) in self.data.iter().enumerate() {
-                data[i] = x.$op();
+                fn [<$op_trait:lower>](self) -> Self::Output {
+                    let mut packet = self;
+                    packet.data.iter_mut().for_each(|x| *x = -(*x));
+                    packet
+                }
             }
-            Packet::new(data)
+
+            impl<T, const N: usize> $op_trait for &Packet<T, N>
+            where T: $op_trait<Output = T> + Copy
+            {
+                type Output = Packet<T, N>;
+
+                fn [<$op_trait:lower>](self) -> Self::Output {
+                    let mut data = unsafe { core::mem::zeroed::<[T; N]>() };
+                    data.iter_mut().zip(self.data.iter()).for_each(|(a, b)| *a = -*b);
+                    Packet::new(data)
+                }
+            }
         }
-    }
+    )*
 }
 
 macro impl_packet_op_scalar_body($self:ident) {
@@ -240,7 +311,7 @@ macro impl_packet_op_scalar {
     }
 }
 
-impl_packet_binary_op_component_wise!(Add, add);
+// impl_packet_binary_op_component_wise!(Add, add);
 impl_packet_binary_op_component_wise!(Sub, sub);
 impl_packet_binary_op_component_wise!(Mul, mul);
 impl_packet_binary_op_component_wise!(Div, div);
@@ -258,13 +329,13 @@ impl_packet_binary_op_component_wise!(asgmt RemAssign, rem_assign);
 impl_packet_binary_op_component_wise!(asgmt BitOrAssign, bitor_assign);
 impl_packet_binary_op_component_wise!(asgmt BitAndAssign, bitand_assign);
 impl_packet_binary_op_component_wise!(asgmt BitXorAssign, bitxor_assign);
-impl_packet_unary_op_component_wise!(Neg, neg);
 
-impl_packet_op_scalar!(Add, add);
-impl_packet_op_scalar!(Sub, sub);
-impl_packet_op_scalar!(Mul, mul);
-impl_packet_op_scalar!(Div, div);
-impl_packet_op_scalar!(Rem, rem);
+// impl_packet_op_scalar!(Add, add);
+// impl_packet_op_scalar!(Sub, sub);
+// impl_packet_op_scalar!(Mul, mul);
+// impl_packet_op_scalar!(Div, div);
+// impl_packet_op_scalar!(Rem, rem);
+
 impl_packet_op_scalar!(asgmt AddAssign, add_assign);
 impl_packet_op_scalar!(asgmt SubAssign, sub_assign);
 impl_packet_op_scalar!(asgmt MulAssign, mul_assign);

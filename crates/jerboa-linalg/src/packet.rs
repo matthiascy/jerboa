@@ -9,8 +9,16 @@ use std::{
     ops::{Deref, DerefMut, Index, IndexMut},
 };
 
+#[const_trait]
+pub trait PacketSize {
+    const SIZE: usize;
+
+    fn size(&self) -> usize {
+        Self::SIZE
+    }
+}
+
 /// Packet of `N` elements of type `T`.
-#[repr(C)]
 pub struct Packet<T, const N: usize> {
     pub(crate) data: [T; N],
     _marker: PhantomData<T>,
@@ -185,7 +193,7 @@ impl<T: Num, const N: usize> Zero for Packet<T, N> {
     }
 }
 
-impl<T: Num, const N: usize> Packet<T, N> {
+impl<T, const N: usize> Packet<T, N> {
     pub const fn new(data: [T; N]) -> Self {
         Self {
             data,
