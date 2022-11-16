@@ -1,13 +1,9 @@
-use crate::core::{
-    image::{
-        codec::{pnm, pnm::Encoding},
-        error::ImageError,
-        iters::{Pixels, PixelsMut},
-        Bit, Pixel,
-    },
-    Vec1, Vec2, Vec3, Vec4,
-};
 use std::{fs::File, io::BufWriter, path::Path};
+use crate::iters::{Pixels, PixelsMut};
+use crate::{Bit, Pixel};
+use crate::codec::pnm;
+use crate::codec::pnm::Encoding;
+use crate::error::ImageError;
 
 #[repr(C)]
 #[derive(Debug, Clone)]
@@ -17,9 +13,9 @@ pub struct PixelBuffer<P: Pixel> {
     samples: Vec<P::Subpixel>,
 }
 
-pub type PixelBufferRgb8 = PixelBuffer<Vec3<u8>>;
-pub type PixelBufferRgb16 = PixelBuffer<Vec3<u16>>;
-pub type PixelBufferRgb32f = PixelBuffer<Vec3<f32>>;
+pub type PixelBufferRgb8 = PixelBuffer<[u8; 3]>;
+pub type PixelBufferRgb16 = PixelBuffer<[u16; 3]>;
+pub type PixelBufferRgb32f = PixelBuffer<[f32; 3]>;
 
 impl<P: Pixel> PixelBuffer<P> {
     pub fn width(&self) -> u32 {
@@ -85,7 +81,7 @@ impl<P: Pixel> PixelBuffer<P> {
     }
 }
 
-impl PixelBuffer<Vec1<Bit>> {
+impl PixelBuffer<[Bit; 1]> {
     pub fn write_as_pbm<P: AsRef<Path>>(
         &self,
         path: P,
@@ -128,7 +124,7 @@ impl PixelBuffer<Vec1<Bit>> {
     }
 }
 
-impl PixelBuffer<Vec1<u8>> {
+impl PixelBuffer<[u8; 1]> {
     pub fn write_as_pgm<P: AsRef<Path>>(
         &self,
         path: P,
@@ -152,7 +148,7 @@ impl PixelBuffer<Vec1<u8>> {
     }
 }
 
-impl PixelBuffer<Vec1<f32>> {
+impl PixelBuffer<[f32; 1]> {
     pub fn write_as_pfm<P: AsRef<Path>>(&self, path: P) -> Result<(), ImageError> {
         self._write_as_pfm(path.as_ref())
     }
@@ -172,7 +168,7 @@ impl PixelBuffer<Vec1<f32>> {
     }
 }
 
-impl PixelBuffer<Vec3<u8>> {
+impl PixelBuffer<[u8; 3]> {
     pub fn write_as_ppm<P: AsRef<Path>>(
         &self,
         path: P,
@@ -196,7 +192,7 @@ impl PixelBuffer<Vec3<u8>> {
     }
 }
 
-impl PixelBuffer<Vec3<u16>> {
+impl PixelBuffer<[u16; 3]> {
     pub fn write_as_ppm<P: AsRef<Path>>(
         &self,
         path: P,
@@ -248,7 +244,7 @@ macro_rules! impl_write_as_pam {
     };
 }
 
-impl PixelBuffer<Vec3<f32>> {
+impl PixelBuffer<[f32; 3]> {
     pub fn write_as_pfm<P: AsRef<Path>>(&self, path: P) -> Result<(), ImageError> {
         self._write_as_pfm(path.as_ref())
     }
@@ -269,28 +265,28 @@ impl PixelBuffer<Vec3<f32>> {
 }
 
 impl_write_as_pam! {
-    PixelBuffer<Vec1<u8>, 1, pnm::TupleType::GrayScale>;
-    PixelBuffer<Vec1<u16>, 1, pnm::TupleType::GrayScale>;
-    PixelBuffer<Vec2<u16>, 2, pnm::TupleType::GrayScaleAlpha>;
-    PixelBuffer<Vec2<u8>, 2, pnm::TupleType::GrayScaleAlpha>;
-    PixelBuffer<Vec3<u8>, 3, pnm::TupleType::Rgb>;
-    PixelBuffer<Vec3<u16>, 3, pnm::TupleType::Rgb>;
-    PixelBuffer<Vec4<u8>, 4, pnm::TupleType::RgbAlpha>;
-    PixelBuffer<Vec4<u16>, 4, pnm::TupleType::RgbAlpha>;
+    PixelBuffer<[u8; 1], 1, pnm::TupleType::GrayScale>;
+    PixelBuffer<[u16; 1], 1, pnm::TupleType::GrayScale>;
+    PixelBuffer<[u16; 2], 2, pnm::TupleType::GrayScaleAlpha>;
+    PixelBuffer<[u8; 2], 2, pnm::TupleType::GrayScaleAlpha>;
+    PixelBuffer<[u8; 3], 3, pnm::TupleType::Rgb>;
+    PixelBuffer<[u16; 3], 3, pnm::TupleType::Rgb>;
+    PixelBuffer<[u8; 4], 4, pnm::TupleType::RgbAlpha>;
+    PixelBuffer<[u16; 4], 4, pnm::TupleType::RgbAlpha>;
 }
 
 #[non_exhaustive]
 #[derive(Debug, Clone)]
 pub enum ImageBuffer {
-    Bitmap(PixelBuffer<Vec1<Bit>>),
-    Luma8(PixelBuffer<Vec1<u8>>),
-    LumaA8(PixelBuffer<Vec2<u8>>),
-    Luma16(PixelBuffer<Vec1<u16>>),
-    LumaA16(PixelBuffer<Vec2<u16>>),
-    Luma32F(PixelBuffer<Vec1<f32>>),
-    Rgb8(PixelBuffer<Vec3<u8>>),
-    RgbA8(PixelBuffer<Vec4<u8>>),
-    Rgb16(PixelBuffer<Vec3<u16>>),
-    RgbA16(PixelBuffer<Vec4<u16>>),
-    Rgb32F(PixelBuffer<Vec3<f32>>),
+    Bitmap(PixelBuffer<[Bit; 1]>),
+    Luma8(PixelBuffer<[u8; 1]>),
+    LumaA8(PixelBuffer<[u8; 2]>),
+    Luma16(PixelBuffer<[u16; 1]>),
+    LumaA16(PixelBuffer<[u16; 2]>),
+    Luma32F(PixelBuffer<[f32; 1]>),
+    Rgb8(PixelBuffer<[u8; 3]>),
+    RgbA8(PixelBuffer<[u8; 4]>),
+    Rgb16(PixelBuffer<[u16; 3]>),
+    RgbA16(PixelBuffer<[u16; 4]>),
+    Rgb32F(PixelBuffer<[f32; 3]>),
 }

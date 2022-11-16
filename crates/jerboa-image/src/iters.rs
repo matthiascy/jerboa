@@ -1,5 +1,5 @@
-use crate::core::image::Pixel;
 use std::slice::{ChunksExact, ChunksExactMut};
+use crate::Pixel;
 
 /// Iterator over the pixels (reference) with coordinates.
 /// Pixel coordinates are in the range [0, width - 1] x [0, height - 1],

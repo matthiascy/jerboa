@@ -1,9 +1,9 @@
-use crate::core::image::ImageFormat;
 use std::{
     error::Error,
     fmt::{Display, Formatter},
     io,
 };
+use crate::ImageFormat;
 
 #[derive(Debug)]
 pub enum ImageError {

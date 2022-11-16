@@ -2,8 +2,8 @@ mod decode;
 mod encode;
 mod error;
 
-pub(crate) use decode::read_pnm_from_stream;
-pub(crate) use encode::write_pnm_to_stream;
+pub use decode::read_pnm_from_stream;
+pub use encode::write_pnm_to_stream;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum TupleType {
@@ -21,7 +21,7 @@ pub enum TupleType {
 }
 
 impl TupleType {
-    pub(crate) fn as_str(&self) -> &'static str {
+    pub fn as_str(&self) -> &'static str {
         match self {
             TupleType::BlackAndWhite => "BLACKANDWHITE",
             TupleType::GrayScale => "GRAYSCALE",
@@ -115,7 +115,7 @@ impl Subtype {
 
 /// Generalised PNM header.
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct Header {
+pub struct Header {
     /// Subtype of the PNM file.
     pub subtype: Subtype,
 

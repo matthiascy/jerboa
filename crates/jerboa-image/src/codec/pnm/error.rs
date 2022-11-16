@@ -1,8 +1,8 @@
-use crate::core::image::codec::pnm::TupleType;
+use jerboa_image::::pnm::TupleType;
 use std::fmt::Display;
 
 #[derive(Debug)]
-pub(crate) enum Error {
+pub enum Error {
     UnknownMagicNumber([u8; 2]),
     UnknownTupleType,
     UnknownAttribute(String),

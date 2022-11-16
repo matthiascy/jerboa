@@ -1,7 +1,3 @@
-use crate::core::{
-    image::{codec::pnm, error::ImageError},
-    Vec1, Vec2, Vec3, Vec4,
-};
 use std::{
     fmt::{Debug, Display},
     fs::File,
@@ -12,11 +8,12 @@ use std::{
 };
 
 pub mod buffer;
-pub mod codec;
 pub mod error;
 pub mod iters;
+pub mod codec;
 
 pub use buffer::*;
+use crate::error::ImageError;
 
 // TODO: color space
 
@@ -86,10 +83,10 @@ pub trait Pixel: Copy + Clone + Default {
     fn from_slice_mut(slice: &mut [Self::Subpixel]) -> &mut Self;
 }
 
-macro_rules! impl_pixel_trait {
-    ($($name:ident<S> { $channels:expr };)*) => {
+macro_rules! impl_pixel_trait_array {
+    ($($channels:expr),*) => {
         $(
-            impl<S: Sample> Pixel for $name<S> {
+            impl<S: Sample> Pixel for [S; $channels] {
                 type Subpixel = S;
 
                 const N_CHANNELS: usize = $channels;
@@ -112,9 +109,7 @@ macro_rules! impl_pixel_trait {
     };
 }
 
-impl_pixel_trait! {
-    Vec1<S> { 1 }; Vec2<S> { 2 }; Vec3<S> { 3 }; Vec4<S> { 4 };
-}
+impl_pixel_trait_array! {1, 2, 3, 4}
 
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -248,6 +243,6 @@ impl ImageDecoder<BufReader<File>> {
     }
 
     fn decode_pnm(mut self) -> Result<ImageBuffer, ImageError> {
-        pnm::read_pnm_from_stream(&mut self.reader)
+        codec::pnm::read_pnm_from_stream(&mut self.reader)
     }
 }

@@ -3,5 +3,7 @@ members = [
 	"crates/jerboa",
 	"crates/jerboa-linalg",
 	"crates/jerboa-rtc",
+	"crates/jerboa-rts",
 	"crates/jerboa-srr",
+	"crates/jerboa-image",
 ]

@@ -1,9 +1,10 @@
-use crate::core::image::{
-    codec::pnm::{Encoding, Endian, Header, Subtype, TupleType},
-    error::{DecodingError, EncodingError, ImageError, ParseError},
-    Bit, ImageBuffer, ImageFormat, PixelBuffer, Sample,
+use jerboa::core::image::{
+    Bit,
+    ImageBuffer, ImageFormat, PixelBuffer, Sample,
 };
 use std::io::{BufRead, Read};
+use jerboa_image::::pnm::{Encoding, Endian, Header, Subtype, TupleType};
+use jerboa_image::error::{DecodingError, EncodingError, ImageError, ParseError};
 
 use super::error::Error as PnmError;
 
@@ -451,7 +452,7 @@ impl Header {
     }
 }
 
-pub(crate) fn read_pnm_from_stream<R: BufRead>(stream: &mut R) -> Result<ImageBuffer, ImageError> {
+pub fn read_pnm_from_stream<R: BufRead>(stream: &mut R) -> Result<ImageBuffer, ImageError> {
     let header = Header::decode(stream)?;
     let n_samples = (header.width * header.height * header.n_channels) as usize;
     let encoding = header.subtype.encoding();
@@ -617,7 +618,7 @@ fn read_samples_be_bytes<R: BufRead, S: PnmSample>(
 #[cfg(test)]
 mod tests {
     use super::{Bit, Encoding, Header, Subtype, TupleType};
-    use quickcheck::{quickcheck, Arbitrary, Gen};
+    use quickcheck::{Arbitrary, Gen, quickcheck};
     use std::ops::{Deref, DerefMut};
 
     impl Arbitrary for Bit {

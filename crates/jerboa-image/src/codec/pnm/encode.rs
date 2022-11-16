@@ -1,9 +1,7 @@
-use crate::core::image::{
-    codec::pnm::{decode::PnmSample, Encoding, Endian, Header, Subtype},
-    error::{EncodingError, ImageError},
-    ImageFormat,
-};
+use jerboa::core::image::ImageFormat;
 use std::io;
+use jerboa_image::::pnm::{decode::PnmSample, Encoding, Endian, Header, Subtype};
+use jerboa_image::error::{EncodingError, ImageError};
 
 fn map_io_error_encoding(err: io::Error) -> ImageError {
     ImageError::Encoding(EncodingError::new(ImageFormat::Pnm, err))
@@ -55,7 +53,7 @@ impl Header {
     }
 }
 
-pub(crate) fn write_pnm_to_stream<S: PnmSample, W: io::Write>(
+pub fn write_pnm_to_stream<S: PnmSample, W: io::Write>(
     stream: &mut W,
     header: Header,
     samples: &[S],

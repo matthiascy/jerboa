@@ -1,9 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
-pub mod axis;
 pub mod bounds;
 pub mod error;
-pub mod image;
 pub mod rounding;
 
 #[derive(Debug, Copy, Clone)]

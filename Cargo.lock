@@ -322,6 +322,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "jerboa-image"
+version = "0.1.0"
+
+[[package]]
 name = "jerboa-linalg"
 version = "0.1.0"
 dependencies = [
@@ -331,6 +335,10 @@ dependencies = [
 
 [[package]]
 name = "jerboa-rtc"
+version = "0.1.0"
+
+[[package]]
+name = "jerboa-rts"
 version = "0.1.0"
 
 [[package]]
