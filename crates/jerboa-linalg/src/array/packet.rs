@@ -1,5 +1,5 @@
 use crate::array::array_s::Array;
-use crate::inner::{FixedShape, ShapeConst};
+use crate::core::{FixedShape, ShapeConst};
 
 /// Fix-sized one-dimension array on the stack.
 #[repr(transparent)]

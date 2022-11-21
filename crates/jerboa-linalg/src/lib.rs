@@ -10,7 +10,7 @@
 
 mod array;
 mod axis;
-mod inner;
+mod core;
 pub mod num;
 
 pub use array::*;

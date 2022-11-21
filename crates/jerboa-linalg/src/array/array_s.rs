@@ -1,9 +1,9 @@
-use crate::inner::{ArrayInner, FixedShape, FixedSized};
+use crate::core::{ArrayCore, FixedShape, FixedSized};
 use core::ops::{Deref};
 
 /// Fix-sized array on the stack.
 #[repr(transparent)]
-pub struct Array<A, S: FixedShape>(ArrayInner<FixedSized<A, { <S as FixedShape>::N_ELEMS }>, S>)
+pub struct Array<A, S: FixedShape>(ArrayCore<FixedSized<A, { <S as FixedShape>::N_ELEMS }>, S>)
 where
     [(); <S as FixedShape>::N_ELEMS]:;
 
@@ -14,7 +14,7 @@ where
 {
     /// Creates a new array.
     pub fn new(data: [A; <S as FixedShape>::N_ELEMS]) -> Self {
-        Self(ArrayInner {
+        Self(ArrayCore {
             data: FixedSized(data),
             shape: S::value(),
             strides: S::strides(),
@@ -27,7 +27,7 @@ where
     S: FixedShape,
     [(); <S as FixedShape>::N_ELEMS]:,
 {
-    type Target = ArrayInner<FixedSized<A, { <S as FixedShape>::N_ELEMS }>, S>;
+    type Target = ArrayCore<FixedSized<A, { <S as FixedShape>::N_ELEMS }>, S>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -36,7 +36,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::inner::cs;
+    use crate::core::cs;
     use super::*;
 
     #[test]

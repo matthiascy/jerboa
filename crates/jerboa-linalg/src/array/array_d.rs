@@ -1,8 +1,8 @@
-use crate::inner::{ArrayInner, DynSized, FixedShape};
+use crate::core::{ArrayCore, DynSized, FixedShape};
 
 /// Fix-sized array on the heap.
 #[repr(transparent)]
-pub struct ArrayD<A, S: FixedShape>(ArrayInner<DynSized<A>, S>);
+pub struct ArrayD<A, S: FixedShape>(ArrayCore<DynSized<A>, S>);
 
 impl<A, S: FixedShape> ArrayD<A, S>
     where
@@ -10,7 +10,7 @@ impl<A, S: FixedShape> ArrayD<A, S>
 {
     /// Creates a new array.
     pub fn new(data: [A; <S as FixedShape>::N_ELEMS]) -> Self {
-        Self(ArrayInner {
+        Self(ArrayCore {
             data: DynSized(Vec::from(data)),
             shape: S::value(),
             strides: S::strides(),

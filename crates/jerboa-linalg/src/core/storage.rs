@@ -1,4 +1,7 @@
-use crate::inner::sealed::Sealed;
+use crate::core::sealed::Sealed;
+
+pub mod dyn_sized;
+pub mod fixed_sized;
 
 /// Trait providing raw access to the elements of the storage, implemented by
 /// all storage types.

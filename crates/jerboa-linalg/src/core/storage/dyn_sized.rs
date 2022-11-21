@@ -1,4 +1,4 @@
-use crate::inner::{display_slice, RawStorage, RawStorageMut, Sealed, Storage, StorageMut};
+use crate::core::{display_slice, RawStorage, RawStorageMut, Sealed, Storage, StorageMut};
 use core::fmt::{Debug, Display, Formatter};
 use core::{ops::Deref};
 
