@@ -12,7 +12,8 @@ impl<A, S: FixedShape> ArrayD<A, S>
     pub fn new(data: [A; <S as FixedShape>::N_ELEMS]) -> Self {
         Self(ArrayInner {
             data: DynSized(Vec::from(data)),
-            shape: S::shape(),
+            shape: S::value(),
+            strides: S::strides(),
         })
     }
 }

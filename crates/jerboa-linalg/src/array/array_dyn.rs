@@ -9,7 +9,8 @@ impl<A> ArrayDyn<A> {
     pub fn new() -> Self {
         Self(ArrayInner {
             data: DynSized(Vec::new()),
-            shape: ShapeDyn::shape(),
+            shape: ShapeDyn::value(),
+            strides: ShapeDyn::strides(),
         })
     }
 }

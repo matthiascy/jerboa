@@ -24,12 +24,19 @@ impl ShapeStorage for Vec<usize> {
 
 
 /// Trait for array shape.
+#[const_trait]
 pub trait Shape {
     /// Underlying shape storage type.
-    type Type: ShapeStorage;
+    type UnderlyingType: ShapeStorage;
 
-    /// Returns the value of storage type.
-    fn shape() -> Self::Type;
+    /// The value of the underlying shape storage. For constant shape,
+    /// this is an array with known size at compile time. For dynamic shape,
+    /// this is a `Vec`.
+    fn value() -> Self::UnderlyingType;
+
+    /// The number of elements needed to skip to get to the next element along
+    /// each dimension.
+    fn strides() -> Self::UnderlyingType;
 }
 
 /// Trait for fixed-sized multi-dimensional array with a known number of
@@ -42,42 +49,40 @@ pub trait FixedShape: Shape {
     /// Number of elements in the multi-dimensional array.
     const N_ELEMS: usize;
 
-    /// Number of dimensions in the multi-dimensional array.
-    fn size() -> usize {
-        Self::N_ELEMS
+    /// Shape of the multi-dimensional array.
+    const SHAPE: Self::UnderlyingType;
+}
+
+impl const Shape for () {
+    type UnderlyingType = [usize; 0];
+
+    fn value() -> Self::UnderlyingType {
+        []
     }
 
-    /// Number of dimensions in the multi-dimensional array.
-    fn n_elems() -> usize {
-        Self::N_ELEMS
-    }
-
-    /// Number of dimensions in the multi-dimensional array.
-    fn n_dims() -> usize {
-        Self::N_DIMS
+    fn strides() -> Self::UnderlyingType {
+        []
     }
 }
 
-impl Shape for () {
-    type Type = [usize; 0];
-
-    fn shape() -> Self::Type {
-        [0; 0]
-    }
-}
-
-impl FixedShape for () {
+impl const FixedShape for () {
     const N_DIMS: usize = 0;
     const N_ELEMS: usize = 0;
+    const SHAPE: Self::UnderlyingType = [];
 }
 
-/// Array's shape type embedding directly the number of dimensions and the size
-/// of each dimension.
+/// Array's const shape type.
+///
+/// This shape type embeds the number of dimensions and the size of each dimension
+/// at compile time in the type system using recursive definition. This allows
+/// the creation of multi-dimensional array on stack with known number of dimensions
+/// and known size for each dimension.
+///
+/// This is a workaround for the lack of variadic generics in Rust. Once variadic
+/// generics are available, this type will be removed.
+///
+/// To create a const shape, use the `cs!` macro.
 pub struct ShapeConst<A: FixedShape, const N: usize>(PhantomData<[A; N]>);
-
-/// Array's shape type whose number of dimensions and the size of each dimension
-/// are known at compile time.
-pub struct ShapeDyn;
 
 /// Recursive macro generating type signature for `ConstShape` with a known
 /// number of dimensions. `$n` is the number of elements of the current
@@ -107,17 +112,34 @@ macro product {
 /// multi-dimensional array.
 macro impl_const_shape {
     ($($n:ident),+) => {
-        impl<$(const $n: usize),+> Shape for generate_const_shape_type!($($n),+) {
-            type Type = [usize; count!($($n),+)];
+        impl<$(const $n: usize),+> const Shape for generate_const_shape_type!($($n),+) {
+            type UnderlyingType = [usize; count!($($n),+)];
 
-            fn shape() -> Self::Type {
+            fn value() -> Self::UnderlyingType {
                 [$($n),+]
+            }
+
+            fn strides() -> Self::UnderlyingType {
+                let shape = [$($n),+];
+                const N: usize = count!($($n),+);
+                let mut strides = [1; N];
+                let mut i = 0;
+                while i < N {
+                    let mut j = i + 1;
+                    while j < N {
+                        strides[i] *= shape[j];
+                        j += 1;
+                    }
+                    i += 1;
+                }
+                strides
             }
         }
 
-        impl<$(const $n: usize),+> FixedShape for generate_const_shape_type!($($n),+) {
+        impl<$(const $n: usize),+> const FixedShape for generate_const_shape_type!($($n),+) {
             const N_DIMS: usize = count!($($n),+);
             const N_ELEMS: usize = product!($($n),+);
+            const SHAPE: Self::UnderlyingType = [$($n),+];
         }
     },
 }
@@ -139,14 +161,6 @@ impl_const_shape!(N0, N1, N2, N3, N4, N5, N6, N7, N8, N9, N10, N11, N12, N13);
 impl_const_shape!(N0, N1, N2, N3, N4, N5, N6, N7, N8, N9, N10, N11, N12, N13, N14);
 impl_const_shape!(N0, N1, N2, N3, N4, N5, N6, N7, N8, N9, N10, N11, N12, N13, N14, N15);
 
-impl Shape for ShapeDyn {
-    type Type = Vec<usize>;
-
-    fn shape() -> Self::Type {
-        Vec::with_capacity(16)
-    }
-}
-
 /// Macro facilitating the creation of a `ShapeConst`.
 pub macro cs {
     ($n:expr) => {
@@ -154,5 +168,40 @@ pub macro cs {
     },
     ($n:expr, $($tail:expr),*) => {
         ShapeConst<cs!($($tail),*), $n>
+    }
+}
+
+
+/// Array's shape type whose number of dimensions and the size of each dimension
+/// are unknown at compile time.
+pub struct ShapeDyn;
+
+impl Shape for ShapeDyn {
+    type UnderlyingType = Vec<usize>;
+
+    fn value() -> Self::UnderlyingType {
+        Vec::with_capacity(8)
+    }
+
+    fn strides() -> Self::UnderlyingType {
+        Vec::with_capacity(8)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_shape() {
+        let shape = <cs!(2, 3, 4) as Shape>::value();
+        let strides = <cs!(2, 3, 4) as Shape>::strides();
+        assert_eq!(shape, [2, 3, 4]);
+        assert_eq!(strides, [12, 4, 1]);
+
+        let shape1 = <cs!(3, 2, 4) as Shape>::value();
+        let strides1 = <cs!(3, 2, 4) as Shape>::strides();
+        assert_eq!(shape1, [3, 2, 4]);
+        assert_eq!(strides1, [8, 4, 1]);
     }
 }

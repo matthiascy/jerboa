@@ -16,7 +16,8 @@ where
     pub fn new(data: [A; <S as FixedShape>::N_ELEMS]) -> Self {
         Self(ArrayInner {
             data: FixedSized(data),
-            shape: S::shape(),
+            shape: S::value(),
+            strides: S::strides(),
         })
     }
 }
@@ -35,7 +36,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::cs;
+    use crate::inner::cs;
     use super::*;
 
     #[test]
