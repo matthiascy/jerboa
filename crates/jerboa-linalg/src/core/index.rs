@@ -1,9 +1,12 @@
 use std::ops::Index;
-use crate::core::{ArrayCore, Shape, ShapeStorage, Storage};
+use crate::core::{ArrayCore, Shape, ShapeStorage, Data};
+
+// Array indexes are always written row-first.
+// Indexing returns ArrayView.
 
 impl<D, S> Index<<S as Shape>::UnderlyingType> for ArrayCore<D, S>
     where
-        D: Storage,
+        D: Data,
         S: Shape,
 {
     type Output = D::Elem;
@@ -15,8 +18,8 @@ impl<D, S> Index<<S as Shape>::UnderlyingType> for ArrayCore<D, S>
         let strides = self.strides().as_slice();
         assert!(indices.len() < shape.len(), "Index out of bounds");
         let idx: usize = indices.iter().zip(strides.iter()).map(|(i, s)| i * s).sum();
-        assert!(idx < self.n_elems(), "index out of bounds");
-        let idx = indices.iter().zip(shape.iter()).fold(0, |acc, (i, s)| acc * s + i);
+        // assert!(idx < self.n_elems(), "index out of bounds");
+        // let idx = indices.iter().zip(shape.iter()).fold(0, |acc, (i, s)| acc * s + i);
         &self.data.as_slice()[idx]
     }
 }
@@ -39,6 +42,6 @@ mod tests {
         };
 
         assert_eq!(array0[[1, 1]], 3);
-        assert_eq!(array1[[1, 0]], 2);
+        assert_eq!(array1[[0, 0]], 0);
     }
 }

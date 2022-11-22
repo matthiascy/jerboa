@@ -1,18 +1,21 @@
 mod sealed;
 mod shape;
-mod storage;
+mod data;
 mod index;
+mod arith;
 
-pub(crate) use storage::dyn_sized::*;
-pub(crate) use storage::fixed_sized::*;
+use std::fmt::{Debug, Display, Error, Formatter};
+pub(crate) use data::dyn_sized::*;
+pub(crate) use data::fixed_sized::*;
 pub(crate) use sealed::Sealed;
 pub(crate) use shape::*;
-pub(crate) use storage::*;
+pub(crate) use data::*;
+pub(crate) use arith::*;
 
 /// A n-dimensional array.
 pub struct ArrayCore<D, S>
 where
-    D: Storage,
+    D: DataRaw,
     S: Shape,
 {
     /// The data of the array.
@@ -28,19 +31,24 @@ where
 
 impl<D, S> ArrayCore<D, S>
 where
-    D: Storage,
+    D: DataRaw,
     S: Shape,
 {
     pub fn shape(&self) -> &S::UnderlyingType {
         &self.shape
     }
+
     pub fn strides(&self) -> &S::UnderlyingType {
         &self.strides
+    }
+
+    pub fn n_dims(&self) -> usize {
+        self.shape.as_slice().len()
     }
 }
 
 impl<D, S> ArrayCore<D, S>
-where D: Storage,
+where D: DataRaw,
       S: FixedShape
 {
     pub fn n_elems(&self) -> usize {
@@ -49,10 +57,24 @@ where D: Storage,
 }
 
 impl<D> ArrayCore<D, ShapeDyn>
-    where D: Storage,
+    where D: DataRaw,
 {
     pub fn n_elems(&self) -> usize {
-        self.shape.iter().product()
+        ShapeDyn::calc_n_elems(&self.shape)
+    }
+}
+
+impl<D, S> Debug for ArrayCore<D, S>
+    where D: DataRaw + Debug,
+          S: Shape,
+          S::UnderlyingType: Debug,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        f.debug_struct("ArrayCore")
+            .field("data", &self.data)
+            .field("shape", &self.shape)
+            .field("strides", &self.strides)
+            .finish()
     }
 }
 

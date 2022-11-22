@@ -1,4 +1,4 @@
-use crate::core::{display_slice, RawStorage, RawStorageMut, Sealed, Storage, StorageMut};
+use crate::core::{display_slice, DataRaw, DataRawMut, Sealed, Data, DataMut};
 use core::fmt::{Debug, Display, Formatter};
 
 /// Fixed-sized array storage.
@@ -23,7 +23,7 @@ impl<A: PartialEq, const N: usize> PartialEq for FixedSized<A, N> {
 
 impl<A: PartialEq + Eq, const N: usize> Eq for FixedSized<A, N> {}
 
-unsafe impl<A, const N: usize> RawStorage for FixedSized<A, N> {
+unsafe impl<A, const N: usize> DataRaw for FixedSized<A, N> {
     type Elem = A;
 
     fn as_ptr(&self) -> *const Self::Elem {
@@ -31,19 +31,19 @@ unsafe impl<A, const N: usize> RawStorage for FixedSized<A, N> {
     }
 }
 
-unsafe impl<A, const N: usize> Storage for FixedSized<A, N> {
+unsafe impl<A, const N: usize> Data for FixedSized<A, N> {
     fn as_slice(&self) -> &[Self::Elem] {
         &self.0
     }
 }
 
-unsafe impl<A, const N: usize> RawStorageMut for FixedSized<A, N> {
+unsafe impl<A, const N: usize> DataRawMut for FixedSized<A, N> {
     fn as_mut_ptr(&mut self) -> *mut Self::Elem {
         self.0.as_mut_ptr()
     }
 }
 
-unsafe impl<A, const N: usize> StorageMut for FixedSized<A, N> {
+unsafe impl<A, const N: usize> DataMut for FixedSized<A, N> {
     fn as_mut_slice(&mut self) -> &mut [Self::Elem] {
         &mut self.0
     }
@@ -65,11 +65,11 @@ impl<A: Display, const N: usize> Display for FixedSized<A, N> {
 
 impl<A, const N: usize> FixedSized<A, N> {
     pub fn as_slice(&self) -> &[A] {
-        <Self as Storage>::as_slice(self)
+        <Self as Data>::as_slice(self)
     }
 
     pub fn as_mut_slice(&mut self) -> &mut [A] {
-        <Self as StorageMut>::as_mut_slice(self)
+        <Self as DataMut>::as_mut_slice(self)
     }
 }
 

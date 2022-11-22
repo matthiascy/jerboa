@@ -1,11 +1,16 @@
+use std::fmt::Write;
 use crate::core::sealed::Sealed;
+
+// Data is always stored contiguously in memory, ordering only affects how the
+// data is interpreted (i.e. the shape and strides).
+// ? Is it possible to only have a single Data trait and use a generic parameter ?
 
 pub mod dyn_sized;
 pub mod fixed_sized;
 
 /// Trait providing raw access to the elements of the storage, implemented by
 /// all storage types.
-pub unsafe trait RawStorage: Sized + Sealed {
+pub unsafe trait DataRaw: Sized + Sealed {
     /// The type of the elements stored in the storage.
     type Elem;
 
@@ -15,14 +20,14 @@ pub unsafe trait RawStorage: Sized + Sealed {
 
 /// Trait providing slice access to the elements of the storage, implemented by
 /// all storage types.
-pub unsafe trait Storage: RawStorage {
+pub unsafe trait Data: DataRaw {
     fn as_slice(&self) -> &[Self::Elem];
 }
 
 /// Trait providing mutable raw access to the elements of the storage,
 /// implemented by storage types that can provide mutable access to their
 /// elements.
-pub unsafe trait RawStorageMut: RawStorage {
+pub unsafe trait DataRawMut: DataRaw {
     /// Get a mutable pointer to the first element of the storage.
     fn as_mut_ptr(&mut self) -> *mut Self::Elem;
 }
@@ -30,7 +35,7 @@ pub unsafe trait RawStorageMut: RawStorage {
 /// Trait providing mutable slice access to the elements of the storage,
 /// implemented by storage types that can provide mutable access to their
 /// elements.
-pub unsafe trait StorageMut: Storage + RawStorageMut {
+pub unsafe trait DataMut: Data + DataRawMut {
     fn as_mut_slice(&mut self) -> &mut [Self::Elem];
 }
 

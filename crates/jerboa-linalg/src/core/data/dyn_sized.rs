@@ -1,4 +1,4 @@
-use crate::core::{display_slice, RawStorage, RawStorageMut, Sealed, Storage, StorageMut};
+use crate::core::{display_slice, DataRaw, DataRawMut, Sealed, Data, DataMut};
 use core::fmt::{Debug, Display, Formatter};
 use core::{ops::Deref};
 
@@ -21,7 +21,7 @@ impl<A: PartialEq> PartialEq for DynSized<A> {
 
 impl<A: PartialEq + Eq> Eq for DynSized<A> {}
 
-unsafe impl<A> RawStorage for DynSized<A> {
+unsafe impl<A> DataRaw for DynSized<A> {
     type Elem = A;
 
     fn as_ptr(&self) -> *const Self::Elem {
@@ -29,19 +29,19 @@ unsafe impl<A> RawStorage for DynSized<A> {
     }
 }
 
-unsafe impl<A> Storage for DynSized<A> {
+unsafe impl<A> Data for DynSized<A> {
     fn as_slice(&self) -> &[Self::Elem] {
         &self.0
     }
 }
 
-unsafe impl<A> RawStorageMut for DynSized<A> {
+unsafe impl<A> DataRawMut for DynSized<A> {
     fn as_mut_ptr(&mut self) -> *mut Self::Elem {
         self.0.as_mut_ptr()
     }
 }
 
-unsafe impl<A> StorageMut for DynSized<A> {
+unsafe impl<A> DataMut for DynSized<A> {
     fn as_mut_slice(&mut self) -> &mut [Self::Elem] {
         &mut self.0
     }
@@ -66,6 +66,20 @@ impl<A> Deref for DynSized<A> {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl<A> From<&[A]> for DynSized<A>
+    where A: Clone
+{
+    fn from(slice: &[A]) -> Self {
+        Self(slice.to_vec())
+    }
+}
+
+impl<A> DynSized<A> {
+    pub fn new() -> Self {
+        Self(Vec::new())
     }
 }
 

@@ -24,19 +24,13 @@ impl ShapeStorage for Vec<usize> {
 
 
 /// Trait for array shape.
+///
+/// This trait is a helper to construct a concrete array shape from recursively
+/// defined const shape type. See `ShapeConst` for more details.
 #[const_trait]
 pub trait Shape {
     /// Underlying shape storage type.
     type UnderlyingType: ShapeStorage;
-
-    /// The value of the underlying shape storage. For constant shape,
-    /// this is an array with known size at compile time. For dynamic shape,
-    /// this is a `Vec`.
-    fn value() -> Self::UnderlyingType;
-
-    /// The number of elements needed to skip to get to the next element along
-    /// each dimension.
-    fn strides() -> Self::UnderlyingType;
 }
 
 /// Trait for fixed-sized multi-dimensional array with a known number of
@@ -49,26 +43,24 @@ pub trait FixedShape: Shape {
     /// Number of elements in the multi-dimensional array.
     const N_ELEMS: usize;
 
-    /// Shape of the multi-dimensional array.
+    /// Shape of the multi-dimensional array. For fixed-sized shape, which is known
+    /// at compile time, this is an array with known size at compile time.
     const SHAPE: Self::UnderlyingType;
+
+    /// Strides of the multi-dimensional array: the number of elements needed to skip
+    /// to get to the next element along each dimension.
+    const STRIDES: Self::UnderlyingType;
 }
 
 impl const Shape for () {
     type UnderlyingType = [usize; 0];
-
-    fn value() -> Self::UnderlyingType {
-        []
-    }
-
-    fn strides() -> Self::UnderlyingType {
-        []
-    }
 }
 
 impl const FixedShape for () {
     const N_DIMS: usize = 0;
     const N_ELEMS: usize = 0;
     const SHAPE: Self::UnderlyingType = [];
+    const STRIDES: Self::UnderlyingType = [];
 }
 
 /// Array's const shape type.
@@ -108,38 +100,32 @@ macro product {
     ($x:tt, $($xs:tt),+) => { $x * product!($($xs),+) }
 }
 
+const fn calc_strides<const N: usize>(shape: [usize; N]) -> [usize; N] {
+    let mut strides = [1; N];
+    let mut stride = 1;
+    let mut i = N;
+    while i > 0 {
+        strides[i - 1] = stride;
+        stride *= shape[i - 1];
+        i -= 1;
+    }
+    strides
+}
+
+
 /// Macro implementing `Shape` and `FixedShape` for a fixed-sized
 /// multi-dimensional array.
 macro impl_const_shape {
     ($($n:ident),+) => {
         impl<$(const $n: usize),+> const Shape for generate_const_shape_type!($($n),+) {
             type UnderlyingType = [usize; count!($($n),+)];
-
-            fn value() -> Self::UnderlyingType {
-                [$($n),+]
-            }
-
-            fn strides() -> Self::UnderlyingType {
-                let shape = [$($n),+];
-                const N: usize = count!($($n),+);
-                let mut strides = [1; N];
-                let mut i = 0;
-                while i < N {
-                    let mut j = i + 1;
-                    while j < N {
-                        strides[i] *= shape[j];
-                        j += 1;
-                    }
-                    i += 1;
-                }
-                strides
-            }
         }
 
         impl<$(const $n: usize),+> const FixedShape for generate_const_shape_type!($($n),+) {
             const N_DIMS: usize = count!($($n),+);
             const N_ELEMS: usize = product!($($n),+);
             const SHAPE: Self::UnderlyingType = [$($n),+];
+            const STRIDES: Self::UnderlyingType = calc_strides([$($n),+]);
         }
     },
 }
@@ -178,13 +164,25 @@ pub struct ShapeDyn;
 
 impl Shape for ShapeDyn {
     type UnderlyingType = Vec<usize>;
+}
 
-    fn value() -> Self::UnderlyingType {
-        Vec::with_capacity(8)
+impl ShapeDyn {
+    /// Calculate the strides of the multi-dimensional array from its shape.
+    pub fn calc_strides(shape: &[usize], strides: &mut [usize]) {
+        let mut stride = 1;
+        for i in (0..shape.len()).rev() {
+            strides[i] = stride;
+            stride *= shape[i];
+        }
     }
 
-    fn strides() -> Self::UnderlyingType {
-        Vec::with_capacity(8)
+    /// Calculate the number of elements in the multi-dimensional array from its shape.
+    pub fn calc_n_elems(shape: &[usize]) -> usize {
+        let mut n_elems = 1;
+        for &dim in shape {
+            n_elems *= dim;
+        }
+        n_elems
     }
 }
 
@@ -194,13 +192,11 @@ mod tests {
 
     #[test]
     fn test_shape() {
-        let shape = <cs!(2, 3, 4) as Shape>::value();
-        let strides = <cs!(2, 3, 4) as Shape>::strides();
-        assert_eq!(shape, [2, 3, 4]);
-        assert_eq!(strides, [12, 4, 1]);
+        assert_eq!(<cs!(2, 3, 4) as FixedShape>::SHAPE, [2, 3, 4]);
+        assert_eq!(<cs!(2, 3, 4) as FixedShape>::STRIDES, [12, 4, 1]);
 
-        let shape1 = <cs!(3, 2, 4) as Shape>::value();
-        let strides1 = <cs!(3, 2, 4) as Shape>::strides();
+        let shape1 = <cs!(3, 2, 4) as FixedShape>::SHAPE;
+        let strides1 = <cs!(3, 2, 4) as FixedShape>::STRIDES;
         assert_eq!(shape1, [3, 2, 4]);
         assert_eq!(strides1, [8, 4, 1]);
     }
