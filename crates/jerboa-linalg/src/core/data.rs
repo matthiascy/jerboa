@@ -1,9 +1,10 @@
-use std::fmt::Write;
 use crate::core::sealed::Sealed;
+use std::fmt::Write;
 
 // Data is always stored contiguously in memory, ordering only affects how the
 // data is interpreted (i.e. the shape and strides).
-// ? Is it possible to only have a single Data trait and use a generic parameter ?
+// ? Is it possible to only have a single Data trait and use a generic parameter
+// ?
 
 pub mod dyn_sized;
 pub mod fixed_sized;

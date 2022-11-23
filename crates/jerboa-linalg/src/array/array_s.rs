@@ -1,7 +1,9 @@
-use crate::core::{ArrayCore, FixedShape, FixedSized, Data, Scalar, Shape};
-use core::ops::{Deref};
-use std::fmt::{Debug, Formatter};
-use std::ops::{Add, DerefMut};
+use crate::core::{ArrayCore, Data, FixedShape, FixedSized, Scalar, Shape};
+use core::ops::Deref;
+use std::{
+    fmt::{Debug, Formatter},
+    ops::{Add, DerefMut},
+};
 
 /// Fix-sized array on the stack.
 #[repr(transparent)]
@@ -24,7 +26,8 @@ where
     }
 
     pub fn from_slice(slice: &[A]) -> Self
-        where A: Clone
+    where
+        A: Clone,
     {
         let data: &[A; <S as FixedShape>::N_ELEMS] = slice.try_into().unwrap();
         Self::new(data.clone())
@@ -68,25 +71,27 @@ where
 }
 
 impl<A, S> From<&[A]> for Array<A, S>
-    where A: Clone,
-          S: FixedShape,
-          [(); <S as FixedShape>::N_ELEMS]:,
+where
+    A: Clone,
+    S: FixedShape,
+    [(); <S as FixedShape>::N_ELEMS]:,
 {
     fn from(slice: &[A]) -> Self {
-        // assert_eq!(slice.len(), <S as FixedShape>::N_ELEMS, "slice length must match array size");
-        // let mut data: [A; <S as FixedShape>::N_ELEMS] = unsafe { core::mem::zeroed() };
-        // data.clone_from_slice(slice);
+        // assert_eq!(slice.len(), <S as FixedShape>::N_ELEMS, "slice length must match
+        // array size"); let mut data: [A; <S as FixedShape>::N_ELEMS] = unsafe
+        // { core::mem::zeroed() }; data.clone_from_slice(slice);
         // Self::new(data)
         Self::from_slice(slice)
     }
 }
 
 impl<A, S> Debug for Array<A, S>
-where S: FixedShape,
-      <S as Shape>::UnderlyingType: Debug,
-        [(); <S as FixedShape>::N_ELEMS]:,
-      [(); <S as FixedShape>::N_ELEMS]:,
-      A: Debug,
+where
+    S: FixedShape,
+    <S as Shape>::UnderlyingType: Debug,
+    [(); <S as FixedShape>::N_ELEMS]:,
+    [(); <S as FixedShape>::N_ELEMS]:,
+    A: Debug,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Array")
@@ -99,8 +104,8 @@ where S: FixedShape,
 
 #[cfg(test)]
 mod tests {
-    use crate::core::cs;
     use super::*;
+    use crate::core::cs;
 
     #[test]
     fn new() {

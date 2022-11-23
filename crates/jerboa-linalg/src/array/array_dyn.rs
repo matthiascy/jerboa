@@ -1,7 +1,8 @@
-use std::fmt::{Debug, Error, Formatter};
-use std::mem;
-use std::ops::{Add, Deref, DerefMut};
 use crate::core::{ArrayCore, DynSized, Scalar, Shape, ShapeDyn};
+use core::{
+    fmt::{Debug, Error, Formatter},
+    ops::*,
+};
 
 /// Dynamic-sized array on the heap.
 #[repr(transparent)]
@@ -27,7 +28,11 @@ impl<A> ArrayDyn<A> {
 
     /// Creates a new array from a vector.
     pub fn from_vec(shape: &[usize], data: Vec<A>) -> Self {
-        assert_eq!(ShapeDyn::calc_n_elems(shape), data.len(), "data length must match array size");
+        assert_eq!(
+            ShapeDyn::calc_n_elems(shape),
+            data.len(),
+            "data length must match array size"
+        );
         let shape: <ShapeDyn as Shape>::UnderlyingType = shape.to_vec();
         let mut strides = shape.clone();
         ShapeDyn::calc_strides(&shape, &mut strides);
@@ -40,9 +45,14 @@ impl<A> ArrayDyn<A> {
 
     /// Creates a new array from a slice.
     pub fn from_slice(shape: &[usize], data: &[A]) -> Self
-        where A: Clone
+    where
+        A: Clone,
     {
-        assert_eq!(ShapeDyn::calc_n_elems(shape), data.len(), "data length must match array size");
+        assert_eq!(
+            ShapeDyn::calc_n_elems(shape),
+            data.len(),
+            "data length must match array size"
+        );
         let shape: <ShapeDyn as Shape>::UnderlyingType = shape.to_vec();
         let mut strides = shape.clone();
         ShapeDyn::calc_strides(&shape, &mut strides);
@@ -63,8 +73,8 @@ impl<A> ArrayDyn<A> {
 }
 
 impl<A> Debug for ArrayDyn<A>
-    where
-        A: Debug,
+where
+    A: Debug,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         f.debug_struct("ArrayDyn")
@@ -89,37 +99,33 @@ impl<A> DerefMut for ArrayDyn<A> {
     }
 }
 
-impl<A, B> Add<B> for ArrayDyn<A>
-where A: Add<B, Output = A> + Clone,
-      B: Scalar,
-{
-    type Output = Self;
+macro impl_array_dyn_binary_op($tr:ident, $mth:ident) {
+    impl<A, B> $tr<B> for ArrayDyn<A>
+    where
+        A: $tr<B, Output = A> + Clone,
+        B: Scalar,
+    {
+        type Output = Self;
 
-    fn add(self, rhs: B) -> Self::Output {
-        Self(self.0.add(rhs))
+        fn $mth(self, rhs: B) -> Self::Output {
+            Self(self.0.$mth(rhs))
+        }
     }
 }
 
-macro impl_array_dyn_binary_ops($($tr:ident, $mth:ident);+) {
-    $(
-        impl<A, B> $tr<B> for ArrayDyn<A>
-        where A: $tr<B, Output = A> + Clone,
-              B: Scalar,
-        {
-            type Output = Self;
-
-            fn $mth(self, rhs: B) -> Self::Output {
-                Self(self.0.$mth(rhs))
-            }
-        }
-    )+
-}
-
-impl_array_dyn_binary_ops!(Add, add; Sub, sub; Mul, mul; Div, div; Rem, rem; BitAnd, bitand; BitOr, bitor; BitXor, bitxor; Shl, shl; Shr, shr);
+impl_array_dyn_binary_op!(Add, add);
+impl_array_dyn_binary_op!(Sub, sub);
+impl_array_dyn_binary_op!(Mul, mul);
+impl_array_dyn_binary_op!(Div, div);
+impl_array_dyn_binary_op!(Rem, rem);
+impl_array_dyn_binary_op!(BitAnd, bitand);
+impl_array_dyn_binary_op!(BitOr, bitor);
+impl_array_dyn_binary_op!(BitXor, bitxor);
+impl_array_dyn_binary_op!(Shl, shl);
+impl_array_dyn_binary_op!(Shr, shr);
 
 #[cfg(test)]
 mod tests {
-    use crate::core::cs;
     use super::*;
 
     #[test]

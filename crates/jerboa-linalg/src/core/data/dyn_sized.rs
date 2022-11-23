@@ -1,6 +1,8 @@
-use crate::core::{display_slice, DataRaw, DataRawMut, Sealed, Data, DataMut};
-use core::fmt::{Debug, Display, Formatter};
-use core::{ops::Deref};
+use crate::core::{display_slice, Data, DataMut, DataRaw, DataRawMut, Sealed};
+use core::{
+    fmt::{Debug, Display, Formatter},
+    ops::Deref,
+};
 
 /// Dynamically-sized array storage.
 pub struct DynSized<A>(pub(crate) Vec<A>);
@@ -70,7 +72,8 @@ impl<A> Deref for DynSized<A> {
 }
 
 impl<A> From<&[A]> for DynSized<A>
-    where A: Clone
+where
+    A: Clone,
 {
     fn from(slice: &[A]) -> Self {
         Self(slice.to_vec())

@@ -1,4 +1,4 @@
-use crate::core::{display_slice, DataRaw, DataRawMut, Sealed, Data, DataMut};
+use crate::core::{display_slice, Data, DataMut, DataRaw, DataRawMut, Sealed};
 use core::fmt::{Debug, Display, Formatter};
 
 /// Fixed-sized array storage.

@@ -1,16 +1,14 @@
-mod sealed;
-mod shape;
+mod arith;
 mod data;
 mod index;
-mod arith;
+mod sealed;
+mod shape;
 
-use std::fmt::{Debug, Display, Error, Formatter};
-pub(crate) use data::dyn_sized::*;
-pub(crate) use data::fixed_sized::*;
+pub(crate) use arith::*;
+pub(crate) use data::{dyn_sized::*, fixed_sized::*, *};
 pub(crate) use sealed::Sealed;
 pub(crate) use shape::*;
-pub(crate) use data::*;
-pub(crate) use arith::*;
+use std::fmt::{Debug, Error, Formatter};
 
 /// A n-dimensional array.
 pub struct ArrayCore<D, S>
@@ -48,8 +46,9 @@ where
 }
 
 impl<D, S> ArrayCore<D, S>
-where D: DataRaw,
-      S: FixedShape
+where
+    D: DataRaw,
+    S: FixedShape,
 {
     pub fn n_elems(&self) -> usize {
         S::N_ELEMS
@@ -57,7 +56,8 @@ where D: DataRaw,
 }
 
 impl<D> ArrayCore<D, ShapeDyn>
-    where D: DataRaw,
+where
+    D: DataRaw,
 {
     pub fn n_elems(&self) -> usize {
         ShapeDyn::calc_n_elems(&self.shape)
@@ -65,9 +65,10 @@ impl<D> ArrayCore<D, ShapeDyn>
 }
 
 impl<D, S> Debug for ArrayCore<D, S>
-    where D: DataRaw + Debug,
-          S: Shape,
-          S::UnderlyingType: Debug,
+where
+    D: DataRaw + Debug,
+    S: Shape,
+    S::UnderlyingType: Debug,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         f.debug_struct("ArrayCore")
@@ -79,3 +80,5 @@ impl<D, S> Debug for ArrayCore<D, S>
 }
 
 // View: offset, shape, strides, data
+//
+//

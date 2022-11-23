@@ -22,7 +22,6 @@ impl ShapeStorage for Vec<usize> {
     }
 }
 
-
 /// Trait for array shape.
 ///
 /// This trait is a helper to construct a concrete array shape from recursively
@@ -43,12 +42,13 @@ pub trait FixedShape: Shape {
     /// Number of elements in the multi-dimensional array.
     const N_ELEMS: usize;
 
-    /// Shape of the multi-dimensional array. For fixed-sized shape, which is known
-    /// at compile time, this is an array with known size at compile time.
+    /// Shape of the multi-dimensional array. For fixed-sized shape, which is
+    /// known at compile time, this is an array with known size at compile
+    /// time.
     const SHAPE: Self::UnderlyingType;
 
-    /// Strides of the multi-dimensional array: the number of elements needed to skip
-    /// to get to the next element along each dimension.
+    /// Strides of the multi-dimensional array: the number of elements needed to
+    /// skip to get to the next element along each dimension.
     const STRIDES: Self::UnderlyingType;
 }
 
@@ -65,13 +65,13 @@ impl const FixedShape for () {
 
 /// Array's const shape type.
 ///
-/// This shape type embeds the number of dimensions and the size of each dimension
-/// at compile time in the type system using recursive definition. This allows
-/// the creation of multi-dimensional array on stack with known number of dimensions
-/// and known size for each dimension.
+/// This shape type embeds the number of dimensions and the size of each
+/// dimension at compile time in the type system using recursive definition.
+/// This allows the creation of multi-dimensional array on stack with known
+/// number of dimensions and known size for each dimension.
 ///
-/// This is a workaround for the lack of variadic generics in Rust. Once variadic
-/// generics are available, this type will be removed.
+/// This is a workaround for the lack of variadic generics in Rust. Once
+/// variadic generics are available, this type will be removed.
 ///
 /// To create a const shape, use the `cs!` macro.
 pub struct ShapeConst<A: FixedShape, const N: usize>(PhantomData<[A; N]>);
@@ -111,7 +111,6 @@ const fn calc_strides<const N: usize>(shape: [usize; N]) -> [usize; N] {
     }
     strides
 }
-
 
 /// Macro implementing `Shape` and `FixedShape` for a fixed-sized
 /// multi-dimensional array.
@@ -157,7 +156,6 @@ pub macro cs {
     }
 }
 
-
 /// Array's shape type whose number of dimensions and the size of each dimension
 /// are unknown at compile time.
 pub struct ShapeDyn;
@@ -176,7 +174,8 @@ impl ShapeDyn {
         }
     }
 
-    /// Calculate the number of elements in the multi-dimensional array from its shape.
+    /// Calculate the number of elements in the multi-dimensional array from its
+    /// shape.
     pub fn calc_n_elems(shape: &[usize]) -> usize {
         let mut n_elems = 1;
         for &dim in shape {
