@@ -13,6 +13,6 @@ mod axis;
 mod core;
 pub mod num;
 
+pub use crate::core::{s, Layout};
 pub use array::*;
-pub use crate::core::{Layout, s};
 pub use axis::Axis3;

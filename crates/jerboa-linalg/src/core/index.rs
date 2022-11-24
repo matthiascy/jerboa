@@ -1,4 +1,4 @@
-use crate::core::{ArrayCore, Data, CShape, ShapeStorage};
+use crate::core::{ArrayCore, CShape, Data, ShapeStorage};
 use std::ops::Index;
 
 // Array indexes are always written row-first.
@@ -17,10 +17,10 @@ use std::ops::Index;
 //         let shape = self.shape().as_slice();
 //         let strides = self.strides().as_slice();
 //         assert!(indices.len() < shape.len(), "Index out of bounds");
-//         let idx: usize = indices.iter().zip(strides.iter()).map(|(i, s)| i * s).sum();
-//         // assert!(idx < self.n_elems(), "index out of bounds");
-//         // let idx = indices.iter().zip(shape.iter()).fold(0, |acc, (i, s)| acc * s +
-//         // i);
+//         let idx: usize = indices.iter().zip(strides.iter()).map(|(i, s)| i *
+// s).sum();         // assert!(idx < self.n_elems(), "index out of bounds");
+//         // let idx = indices.iter().zip(shape.iter()).fold(0, |acc, (i, s)|
+// acc * s +         // i);
 //         &self.data.as_slice()[idx]
 //     }
 // }

@@ -1,5 +1,5 @@
-use std::marker::PhantomData;
 use crate::core::Layout;
+use std::marker::PhantomData;
 
 pub trait ShapeStorage {
     fn as_slice(&self) -> &[usize];
@@ -45,8 +45,8 @@ pub trait CShape {
     const SHAPE: Self::UnderlyingType;
 
     /// Strides of the multi-dimensional array: the number of elements needed to
-    /// skip to get to the next element along each dimension. Pre-computed strides
-    /// for row-major layout.
+    /// skip to get to the next element along each dimension. Pre-computed
+    /// strides for row-major layout.
     const ROW_MAJOR_STRIDES: Self::UnderlyingType;
 
     /// Pre-computed strides for column-major layout.
@@ -190,7 +190,8 @@ pub trait Shape {
     /// Returns the concrete shape type of the array.
     ///
     /// In the case of const shape, this is the actual shape. On the other hand,
-    /// in the case of dynamic shape, this is an instance of `Self::UnderlyingType`.
+    /// in the case of dynamic shape, this is an instance of
+    /// `Self::UnderlyingType`.
     fn shape() -> Self::UnderlyingType;
 
     /// Returns the concrete strides type of the array.
@@ -201,7 +202,7 @@ pub trait Shape {
     fn row_major_strides() -> Self::UnderlyingType;
 
     /// Returns the concrete strides type of the array.
-    fn col_major_strides() -> Self::UnderlyingType;
+    fn column_major_strides() -> Self::UnderlyingType;
 }
 
 impl<T: CShape> const Shape for T {
@@ -220,7 +221,7 @@ impl<T: CShape> const Shape for T {
         T::ROW_MAJOR_STRIDES
     }
 
-    fn col_major_strides() -> Self::UnderlyingType {
+    fn column_major_strides() -> Self::UnderlyingType {
         T::COLUMN_MAJOR_STRIDES
     }
 }
@@ -241,7 +242,7 @@ impl Shape for DynamicShape {
         Vec::with_capacity(8)
     }
 
-    fn col_major_strides() -> Self::UnderlyingType {
+    fn column_major_strides() -> Self::UnderlyingType {
         Vec::with_capacity(8)
     }
 }
@@ -291,7 +292,7 @@ mod tests {
         assert_eq!(<S3 as Shape>::N_ELEMS, Some(24));
         assert_eq!(<S3 as CShape>::SHAPE, [2, 3, 4]);
         assert_eq!(<S3 as Shape>::row_major_strides(), [12, 4, 1]);
-        assert_eq!(<S3 as Shape>::col_major_strides(), [1, 2, 6]);
+        assert_eq!(<S3 as Shape>::column_major_strides(), [1, 2, 6]);
     }
 
     #[test]

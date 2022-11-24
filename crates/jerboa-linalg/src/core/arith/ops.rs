@@ -74,13 +74,13 @@ impl_binary_op!(Shr, >>, shr);
 
 #[cfg(test)]
 mod tests {
-    use crate::{core::s, Array, ArrayD};
+    use crate::{core::s, Array, ArrayD, ArrayDyn};
 
     #[test]
     fn add() {
-        // let a = ArrayDyn::from_slice(&[2, 5], &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-        // let b = a + 1;
-        // println!("{:?}", b);
+        let a = ArrayDyn::from_slice(&[2, 5], &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let b = a + 1;
+        println!("{:?}", b);
 
         let a: Array<i32, s!(2, 2)> = Array::new([1, 2, 3, 4]);
         let b = a + 1;
@@ -88,6 +88,9 @@ mod tests {
 
         let a: ArrayD<f32, s!(2, 3)> = ArrayD::new([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
         let b = a + 2.0;
-        assert_eq!(b.data, ArrayD::<f32, s!(2, 3)>::new([3.0, 4.0, 5.0, 6.0, 7.0, 8.0]).data);
+        assert_eq!(
+            b.data,
+            ArrayD::<f32, s!(2, 3)>::new([3.0, 4.0, 5.0, 6.0, 7.0, 8.0]).data
+        );
     }
 }

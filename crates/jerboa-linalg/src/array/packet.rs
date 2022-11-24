@@ -1,8 +1,7 @@
 use crate::{
     array::array_s::Array,
-    core::{CShape, ConstShape},
+    core::{CShape, ConstShape, RowMajor, TLayout},
 };
-use crate::core::{RowMajor, TLayout};
 
 /// Fix-sized one-dimension array on the stack.
 #[repr(transparent)]

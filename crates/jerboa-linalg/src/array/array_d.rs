@@ -1,11 +1,11 @@
-use crate::core::{ArrayCore, DynSized, CShape, Shape, Layout, TLayout, RowMajor};
+use crate::core::{ArrayCore, CShape, DynSized, Layout, RowMajor, TLayout};
 use std::fmt::{Debug, Formatter};
 
 /// Fix-sized array on the heap.
 #[repr(transparent)]
 pub struct ArrayD<A, S: CShape, L: TLayout = RowMajor>(ArrayCore<DynSized<A>, S, L>);
 
-impl<A, S, L: TLayout> ArrayD<A, S, L>
+impl<A, S, L> ArrayD<A, S, L>
 where
     L: TLayout,
     S: CShape,
@@ -47,9 +47,8 @@ where
 
 mod ops {
     use super::ArrayD;
-    use crate::core::{CShape, Scalar, ArrayCore, DynSized, TLayout};
+    use crate::core::{ArrayCore, CShape, DynSized, Scalar, TLayout};
     use core::ops::{Add, BitAnd, BitOr, BitXor, Deref, DerefMut, Div, Mul, Rem, Shl, Shr, Sub};
-    use crate::Layout;
 
     impl<A, S, L> Deref for ArrayD<A, S, L>
     where

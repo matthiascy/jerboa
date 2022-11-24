@@ -11,7 +11,7 @@ pub trait NdArray {
     fn n_dims(&self) -> usize;
 }
 
+pub use array_d::ArrayD;
 pub use array_dyn::ArrayDyn;
 pub use array_s::Array;
-pub use array_d::ArrayD;
 pub use packet::Packet;

@@ -5,16 +5,17 @@ mod sealed;
 mod shape;
 
 pub(crate) use arith::*;
+pub use data::*;
 pub(crate) use sealed::Sealed;
 pub use shape::*;
-pub use data::*;
 
 use std::fmt::{Debug, Error, Formatter};
 
 /// A n-dimensional array.
-pub struct ArrayCore<D, S, L: TLayout = RowMajor>
+pub struct ArrayCore<D, S, L = RowMajor>
 where
     D: DataRaw,
+    L: TLayout,
     S: Shape,
 {
     /// The data of the array.
@@ -41,41 +42,37 @@ where
     L: TLayout,
     S: Shape,
 {
+    /// Returns the number of elements in the array.
+    pub fn n_elems(&self) -> usize {
+        if let Some(n) = S::N_ELEMS {
+            n
+        } else {
+            calc_n_elems(self.shape.as_slice())
+        }
+    }
+
+    /// Returns the number of dimensions of the array.
+    pub fn n_dims(&self) -> usize {
+        if let Some(n) = S::N_DIMS {
+            n
+        } else {
+            self.shape.as_slice().len()
+        }
+    }
+
+    /// Returns the shape of the array.
     pub fn shape(&self) -> &[usize] {
         self.shape.as_slice()
     }
 
+    /// Returns the strides of the array.
     pub fn strides(&self) -> &[usize] {
         self.strides.as_slice()
     }
 
-    pub fn n_dims(&self) -> usize {
-        self.shape.as_slice().len()
-    }
-
+    /// Returns the layout of the array.
     pub fn layout(&self) -> Layout {
         L::LAYOUT
-    }
-}
-
-impl<D, S, L> ArrayCore<D, S, L>
-where
-    D: DataRaw,
-    L: TLayout,
-    S: CShape,
-{
-    pub fn n_elems(&self) -> usize {
-        S::N_ELEMS
-    }
-}
-
-impl<D, L> ArrayCore<D, DynamicShape, L>
-where
-    D: DataRaw,
-    L: TLayout,
-{
-    pub fn n_elems(&self) -> usize {
-        calc_n_elems(&self.shape)
     }
 }
 
@@ -94,4 +91,90 @@ where
             .field("layout", &self.layout)
             .finish()
     }
+}
+
+impl<D0, D1, S0, S1, L0, L1, E> PartialEq<ArrayCore<D1, S1, L1>> for ArrayCore<D0, S0, L0>
+where
+    D0: DataRaw<Elem = E>,
+    D1: DataRaw<Elem = E>,
+    E: PartialEq,
+    L0: TLayout,
+    L1: TLayout,
+    S0: Shape,
+    S1: Shape,
+{
+    fn eq(&self, other: &ArrayCore<D1, S1, L1>) -> bool {
+        let have_same_layout = self.layout == other.layout;
+
+        if have_same_layout {
+            for (a, b) in self.shape.as_slice().iter().zip(other.shape.as_slice()) {
+                if a != b {
+                    return false;
+                }
+            }
+        } else {
+            for (a, b) in self
+                .shape
+                .as_slice()
+                .iter()
+                .zip(other.shape.as_slice().iter().rev())
+            {
+                if a != b {
+                    return false;
+                }
+            }
+        }
+
+        unsafe {
+            let a = self.data.as_ptr();
+            let b = other.data.as_ptr();
+            let n = self.n_elems();
+            for i in 0..n {
+                if *a.add(i) != *b.add(i) {
+                    return false;
+                }
+            }
+        }
+
+        true
+    }
+}
+
+#[test]
+fn test_array_core_eq() {
+    let a: ArrayCore<FixedSized<u32, 16>, s!(4, 4)> = ArrayCore {
+        data: FixedSized([1; 16]),
+        shape: <s!(4, 4) as Shape>::shape(),
+        strides: <s!(4, 4) as Shape>::row_major_strides(),
+        layout: Layout::RowMajor,
+        _marker: Default::default(),
+    };
+
+    let b: ArrayCore<FixedSized<u32, 16>, s!(4, 4)> = ArrayCore {
+        data: FixedSized([1; 16]),
+        shape: <s!(4, 4) as Shape>::shape(),
+        strides: <s!(4, 4) as Shape>::column_major_strides(),
+        layout: Layout::ColumnMajor,
+        _marker: Default::default(),
+    };
+    assert_eq!(a, b);
+
+    let c: ArrayCore<FixedSized<u32, 12>, s!(4, 3)> = ArrayCore {
+        data: FixedSized([1; 12]),
+        shape: <s!(4, 3) as Shape>::shape(),
+        strides: <s!(4, 3) as Shape>::row_major_strides(),
+        layout: Layout::RowMajor,
+        _marker: Default::default(),
+    };
+
+    let d: ArrayCore<FixedSized<u32, 12>, s!(3, 4)> = ArrayCore {
+        data: FixedSized([1; 12]),
+        shape: <s!(3, 4) as Shape>::shape(),
+        strides: <s!(3, 4) as Shape>::column_major_strides(),
+        layout: Layout::ColumnMajor,
+        _marker: Default::default(),
+    };
+
+    assert_eq!(c, d);
+    assert_ne!(a, c);
 }

@@ -1,4 +1,6 @@
-use crate::core::{ArrayCore, DynSized, Scalar, CShape, DynamicShape, Shape, calc_strides, TLayout, RowMajor, calc_n_elems};
+use crate::core::{
+    calc_n_elems, calc_strides, ArrayCore, DynSized, DynamicShape, RowMajor, Scalar, Shape, TLayout,
+};
 use core::{
     fmt::{Debug, Error, Formatter},
     ops::*,

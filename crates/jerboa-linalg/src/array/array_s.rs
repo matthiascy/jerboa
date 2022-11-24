@@ -1,4 +1,4 @@
-use crate::core::{ArrayCore, Data, FixedSized, Scalar, CShape, Layout, TLayout, RowMajor};
+use crate::core::{ArrayCore, CShape, FixedSized, Layout, RowMajor, Scalar, TLayout};
 use core::ops::Deref;
 use std::{
     fmt::{Debug, Formatter},
@@ -7,8 +7,10 @@ use std::{
 
 /// Fix-sized array on the stack.
 #[repr(transparent)]
-pub struct Array<A, S: CShape, L: TLayout = RowMajor>(ArrayCore<FixedSized<A, { <S as CShape>::N_ELEMS }>, S, L>)
+pub struct Array<A, S, L = RowMajor>(ArrayCore<FixedSized<A, { <S as CShape>::N_ELEMS }>, S, L>)
 where
+    L: TLayout,
+    S: CShape,
     [(); <S as CShape>::N_ELEMS]:;
 
 impl<A, S, L> Array<A, S, L>
@@ -119,7 +121,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::{RowMajor, s};
+    use crate::core::s;
 
     #[test]
     fn new() {

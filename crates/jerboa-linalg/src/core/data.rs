@@ -14,7 +14,8 @@ pub use fixed_sized::FixedSized;
 /// Memory layout of the data.
 ///
 /// + row-major layout (or C layout): the data is stored row by row in memory;
-///   the strides grow from right to left; the last dimension varies the fastest.
+///   the strides grow from right to left; the last dimension varies the
+/// fastest.
 ///
 /// + col(umn)-major layout (or Fortran layout): the data is stored column by
 ///   column in memory; the strides grow from left to right; the first dimension
