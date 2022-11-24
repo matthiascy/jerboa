@@ -1,5 +1,4 @@
 use crate::core::sealed::Sealed;
-use std::fmt::Write;
 
 // Data is always stored contiguously in memory, ordering only affects how the
 // data is interpreted (i.e. the shape and strides).
@@ -8,6 +7,41 @@ use std::fmt::Write;
 
 pub mod dyn_sized;
 pub mod fixed_sized;
+
+pub use dyn_sized::DynSized;
+pub use fixed_sized::FixedSized;
+
+/// Memory layout of the data.
+///
+/// + row-major layout (or C layout): the data is stored row by row in memory;
+///   the strides grow from right to left; the last dimension varies the fastest.
+///
+/// + col(umn)-major layout (or Fortran layout): the data is stored column by
+///   column in memory; the strides grow from left to right; the first dimension
+///   varies the fastest.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub enum Layout {
+    RowMajor,
+    ColumnMajor,
+}
+
+// !!! workarounds for incomplete feature: adt_const_params
+pub trait TLayout: Sized {
+    const LAYOUT: Layout;
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct RowMajor;
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct ColumnMajor;
+
+impl TLayout for RowMajor {
+    const LAYOUT: Layout = Layout::RowMajor;
+}
+
+impl TLayout for ColumnMajor {
+    const LAYOUT: Layout = Layout::ColumnMajor;
+}
 
 /// Trait providing raw access to the elements of the storage, implemented by
 /// all storage types.

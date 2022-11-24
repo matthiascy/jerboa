@@ -1,20 +1,21 @@
 use crate::{
     array::array_s::Array,
-    core::{FixedShape, ShapeConst},
+    core::{CShape, ConstShape},
 };
+use crate::core::{RowMajor, TLayout};
 
 /// Fix-sized one-dimension array on the stack.
 #[repr(transparent)]
-pub struct Packet<A, const N: usize>(Array<A, ShapeConst<(), N>>)
+pub struct Packet<A, const N: usize, L: TLayout = RowMajor>(Array<A, ConstShape<(), N>, L>)
 where
-    [(); <ShapeConst<(), N> as FixedShape>::N_ELEMS]:;
+    [(); <ConstShape<(), N> as CShape>::N_ELEMS]:;
 
-impl<A, const N: usize> Packet<A, N>
+impl<A, const N: usize, L: TLayout> Packet<A, N, L>
 where
-    [(); <ShapeConst<(), N> as FixedShape>::N_ELEMS]:,
+    [(); <ConstShape<(), N> as CShape>::N_ELEMS]:,
 {
     /// Creates a new array.
-    pub fn new(data: [A; <ShapeConst<(), N> as FixedShape>::N_ELEMS]) -> Self {
+    pub fn new(data: [A; <ConstShape<(), N> as CShape>::N_ELEMS]) -> Self {
         Self(Array::new(data))
     }
 }

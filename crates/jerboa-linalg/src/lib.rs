@@ -14,4 +14,5 @@ mod core;
 pub mod num;
 
 pub use array::*;
+pub use crate::core::{Layout, s};
 pub use axis::Axis3;

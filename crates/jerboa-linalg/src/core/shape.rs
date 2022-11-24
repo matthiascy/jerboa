@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use crate::core::Layout;
 
 pub trait ShapeStorage {
     fn as_slice(&self) -> &[usize];
@@ -22,20 +23,16 @@ impl ShapeStorage for Vec<usize> {
     }
 }
 
-/// Trait for array shape.
+/// Trait for fixed-sized multi-dimensional array with a known number of
+/// dimensions and size of each dimension at compile time.
 ///
 /// This trait is a helper to construct a concrete array shape from recursively
-/// defined const shape type. See `ShapeConst` for more details.
+/// defined const shape type. See `ConstShape` for more details.
 #[const_trait]
-pub trait Shape {
+pub trait CShape {
     /// Underlying shape storage type.
     type UnderlyingType: ShapeStorage;
-}
 
-/// Trait for fixed-sized multi-dimensional array with a known number of
-/// dimensions and a known size for each dimension.
-#[const_trait]
-pub trait FixedShape: Shape {
     /// Number of dimensions in the multi-dimensional array.
     const N_DIMS: usize;
 
@@ -48,19 +45,21 @@ pub trait FixedShape: Shape {
     const SHAPE: Self::UnderlyingType;
 
     /// Strides of the multi-dimensional array: the number of elements needed to
-    /// skip to get to the next element along each dimension.
-    const STRIDES: Self::UnderlyingType;
+    /// skip to get to the next element along each dimension. Pre-computed strides
+    /// for row-major layout.
+    const ROW_MAJOR_STRIDES: Self::UnderlyingType;
+
+    /// Pre-computed strides for column-major layout.
+    const COLUMN_MAJOR_STRIDES: Self::UnderlyingType;
 }
 
-impl const Shape for () {
+impl const CShape for () {
     type UnderlyingType = [usize; 0];
-}
-
-impl const FixedShape for () {
     const N_DIMS: usize = 0;
     const N_ELEMS: usize = 0;
     const SHAPE: Self::UnderlyingType = [];
-    const STRIDES: Self::UnderlyingType = [];
+    const ROW_MAJOR_STRIDES: Self::UnderlyingType = [];
+    const COLUMN_MAJOR_STRIDES: Self::UnderlyingType = [];
 }
 
 /// Array's const shape type.
@@ -73,18 +72,17 @@ impl const FixedShape for () {
 /// This is a workaround for the lack of variadic generics in Rust. Once
 /// variadic generics are available, this type will be removed.
 ///
-/// To create a const shape, use the `cs!` macro.
-pub struct ShapeConst<A: FixedShape, const N: usize>(PhantomData<[A; N]>);
+/// To create a const shape, use the `s!` macro.
+pub struct ConstShape<A: CShape, const N: usize>(PhantomData<[A; N]>);
 
-/// Recursive macro generating type signature for `ConstShape` with a known
-/// number of dimensions. `$n` is the number of elements of the current
-/// dimension.
-macro generate_const_shape_type {
+/// Recursive macro generating type signature for `ConstShape` from a
+/// sequence of integers representing the size of each dimension.
+macro generate_const_shape {
     ($n:ident) => {
-        ShapeConst<(), $n>
+        ConstShape<(), $n>
     },
     ($n:ident, $($ns:ident),+) => {
-        ShapeConst<generate_const_shape_type!($($ns),+), $n>
+        ConstShape<generate_const_shape!($($ns),+), $n>
     }
 }
 
@@ -100,7 +98,8 @@ macro product {
     ($x:tt, $($xs:tt),+) => { $x * product!($($xs),+) }
 }
 
-const fn calc_strides<const N: usize>(shape: [usize; N]) -> [usize; N] {
+/// Calculates the strides for row-major layout from the shape.
+const fn calc_row_major_strides<const N: usize>(shape: &[usize; N]) -> [usize; N] {
     let mut strides = [1; N];
     let mut stride = 1;
     let mut i = N;
@@ -112,21 +111,29 @@ const fn calc_strides<const N: usize>(shape: [usize; N]) -> [usize; N] {
     strides
 }
 
-/// Macro implementing `Shape` and `FixedShape` for a fixed-sized
-/// multi-dimensional array.
-macro impl_const_shape {
-    ($($n:ident),+) => {
-        impl<$(const $n: usize),+> const Shape for generate_const_shape_type!($($n),+) {
-            type UnderlyingType = [usize; count!($($n),+)];
-        }
+/// Calculates the strides for column-major layout from the shape.
+const fn calc_col_major_strides<const N: usize>(shape: &[usize; N]) -> [usize; N] {
+    let mut strides = [1; N];
+    let mut stride = 1;
+    let mut i = 0;
+    while i < N {
+        strides[i] = stride;
+        stride *= shape[i];
+        i += 1;
+    }
+    strides
+}
 
-        impl<$(const $n: usize),+> const FixedShape for generate_const_shape_type!($($n),+) {
-            const N_DIMS: usize = count!($($n),+);
-            const N_ELEMS: usize = product!($($n),+);
-            const SHAPE: Self::UnderlyingType = [$($n),+];
-            const STRIDES: Self::UnderlyingType = calc_strides([$($n),+]);
-        }
-    },
+/// Macro implementing `CShape` for `ConstShape` of a given shape.
+macro impl_const_shape($($n:ident),+) {
+    impl<$(const $n: usize),+> const CShape for generate_const_shape!($($n),+) {
+        type UnderlyingType = [usize; count!($($n),+)];
+        const N_DIMS: usize = count!($($n),+);
+        const N_ELEMS: usize = product!($($n),+);
+        const SHAPE: Self::UnderlyingType = [$($n),+];
+        const ROW_MAJOR_STRIDES: Self::UnderlyingType = calc_row_major_strides(&[$($n),+]);
+        const COLUMN_MAJOR_STRIDES: Self::UnderlyingType = calc_col_major_strides(&[$($n),+]);
+    }
 }
 
 impl_const_shape!(N0);
@@ -146,42 +153,130 @@ impl_const_shape!(N0, N1, N2, N3, N4, N5, N6, N7, N8, N9, N10, N11, N12, N13);
 impl_const_shape!(N0, N1, N2, N3, N4, N5, N6, N7, N8, N9, N10, N11, N12, N13, N14);
 impl_const_shape!(N0, N1, N2, N3, N4, N5, N6, N7, N8, N9, N10, N11, N12, N13, N14, N15);
 
-/// Macro facilitating the creation of a `ShapeConst`.
-pub macro cs {
+/// Macro facilitating the creation of a `ConstShape`.
+pub macro s {
     ($n:expr) => {
-        ShapeConst<(), $n>
+        ConstShape<(), $n>
     },
     ($n:expr, $($tail:expr),*) => {
-        ShapeConst<cs!($($tail),*), $n>
+        ConstShape<s!($($tail),*), $n>
     }
 }
 
 /// Array's shape type whose number of dimensions and the size of each dimension
 /// are unknown at compile time.
-pub struct ShapeDyn;
+pub struct DynamicShape;
 
-impl Shape for ShapeDyn {
-    type UnderlyingType = Vec<usize>;
+/// Common trait for array's shape type.
+#[const_trait]
+pub trait Shape {
+    type UnderlyingType: ShapeStorage;
+
+    /// Number of dimensions.
+    const N_DIMS: Option<usize>;
+
+    /// Number of elements.
+    const N_ELEMS: Option<usize>;
+
+    /// Shape of the array.
+    const SHAPE: Option<Self::UnderlyingType>;
+
+    /// Strides for row-major layout.
+    const ROW_MAJOR_STRIDES: Option<Self::UnderlyingType>;
+
+    /// Strides for column-major layout.
+    const COLUMN_MAJOR_STRIDES: Option<Self::UnderlyingType>;
+
+    /// Returns the concrete shape type of the array.
+    ///
+    /// In the case of const shape, this is the actual shape. On the other hand,
+    /// in the case of dynamic shape, this is an instance of `Self::UnderlyingType`.
+    fn shape() -> Self::UnderlyingType;
+
+    /// Returns the concrete strides type of the array.
+    ///
+    /// In the case of const shape, the returned value is the actual strides
+    /// of the array, cause the strides are known at compile time. Otherwise,
+    /// the returned value is an empty value of type `Self::UnderlyingType`.
+    fn row_major_strides() -> Self::UnderlyingType;
+
+    /// Returns the concrete strides type of the array.
+    fn col_major_strides() -> Self::UnderlyingType;
 }
 
-impl ShapeDyn {
-    /// Calculate the strides of the multi-dimensional array from its shape.
-    pub fn calc_strides(shape: &[usize], strides: &mut [usize]) {
-        let mut stride = 1;
-        for i in (0..shape.len()).rev() {
-            strides[i] = stride;
-            stride *= shape[i];
-        }
+impl<T: CShape> const Shape for T {
+    type UnderlyingType = T::UnderlyingType;
+    const N_DIMS: Option<usize> = Some(T::N_DIMS);
+    const N_ELEMS: Option<usize> = Some(T::N_ELEMS);
+    const SHAPE: Option<Self::UnderlyingType> = Some(T::SHAPE);
+    const ROW_MAJOR_STRIDES: Option<Self::UnderlyingType> = Some(T::ROW_MAJOR_STRIDES);
+    const COLUMN_MAJOR_STRIDES: Option<Self::UnderlyingType> = Some(T::COLUMN_MAJOR_STRIDES);
+
+    fn shape() -> Self::UnderlyingType {
+        T::SHAPE
     }
 
-    /// Calculate the number of elements in the multi-dimensional array from its
-    /// shape.
-    pub fn calc_n_elems(shape: &[usize]) -> usize {
-        let mut n_elems = 1;
-        for &dim in shape {
-            n_elems *= dim;
+    fn row_major_strides() -> Self::UnderlyingType {
+        T::ROW_MAJOR_STRIDES
+    }
+
+    fn col_major_strides() -> Self::UnderlyingType {
+        T::COLUMN_MAJOR_STRIDES
+    }
+}
+
+impl Shape for DynamicShape {
+    type UnderlyingType = Vec<usize>;
+    const N_DIMS: Option<usize> = None;
+    const N_ELEMS: Option<usize> = None;
+    const SHAPE: Option<Self::UnderlyingType> = None;
+    const ROW_MAJOR_STRIDES: Option<Self::UnderlyingType> = None;
+    const COLUMN_MAJOR_STRIDES: Option<Self::UnderlyingType> = None;
+
+    fn shape() -> Self::UnderlyingType {
+        Vec::with_capacity(8)
+    }
+
+    fn row_major_strides() -> Self::UnderlyingType {
+        Vec::with_capacity(8)
+    }
+
+    fn col_major_strides() -> Self::UnderlyingType {
+        Vec::with_capacity(8)
+    }
+}
+
+/// Computes the number of elements in the array given its shape.
+pub const fn calc_n_elems(shape: &[usize]) -> usize {
+    let mut n_elems = 1;
+    let n = shape.len();
+    let mut i = 0;
+    while i < n {
+        n_elems *= shape[i];
+        i += 1;
+    }
+    n_elems
+}
+
+/// Computes the strides of the array given its shape and layout.
+pub const fn calc_strides(shape: &[usize], strides: &mut [usize], layout: Layout) {
+    let n = shape.len();
+    let mut i = 0;
+    match layout {
+        Layout::RowMajor => {
+            strides[n - 1] = 1;
+            while i < n - 1 {
+                strides[n - 2 - i] = strides[n - 1 - i] * shape[n - 1 - i];
+                i += 1;
+            }
         }
-        n_elems
+        Layout::ColumnMajor => {
+            strides[0] = 1;
+            while i < n - 1 {
+                strides[i + 1] = strides[i] * shape[i];
+                i += 1;
+            }
+        }
     }
 }
 
@@ -190,13 +285,27 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_shape() {
-        assert_eq!(<cs!(2, 3, 4) as FixedShape>::SHAPE, [2, 3, 4]);
-        assert_eq!(<cs!(2, 3, 4) as FixedShape>::STRIDES, [12, 4, 1]);
+    fn test_shape_macro() {
+        type S3 = s![2, 3, 4];
+        assert_eq!(<S3 as CShape>::N_DIMS, 3);
+        assert_eq!(<S3 as Shape>::N_ELEMS, Some(24));
+        assert_eq!(<S3 as CShape>::SHAPE, [2, 3, 4]);
+        assert_eq!(<S3 as Shape>::row_major_strides(), [12, 4, 1]);
+        assert_eq!(<S3 as Shape>::col_major_strides(), [1, 2, 6]);
+    }
 
-        let shape1 = <cs!(3, 2, 4) as FixedShape>::SHAPE;
-        let strides1 = <cs!(3, 2, 4) as FixedShape>::STRIDES;
-        assert_eq!(shape1, [3, 2, 4]);
-        assert_eq!(strides1, [8, 4, 1]);
+    #[test]
+    fn test_calc_strides() {
+        let mut strides = [0; 3];
+        calc_strides(&[2, 3, 4], &mut strides, Layout::RowMajor);
+        assert_eq!(strides, [12, 4, 1]);
+        calc_strides(&[3, 4, 2], &mut strides, Layout::ColumnMajor);
+        assert_eq!(strides, [1, 3, 12]);
+    }
+
+    #[test]
+    fn test_n_elems() {
+        assert_eq!(calc_n_elems(&[2, 3, 4]), 24);
+        assert_eq!(calc_n_elems(&[3, 4, 2]), 24);
     }
 }

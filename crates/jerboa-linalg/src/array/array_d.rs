@@ -1,29 +1,38 @@
-use crate::core::{ArrayCore, DynSized, FixedShape, Shape};
+use crate::core::{ArrayCore, DynSized, CShape, Shape, Layout, TLayout, RowMajor};
 use std::fmt::{Debug, Formatter};
 
 /// Fix-sized array on the heap.
 #[repr(transparent)]
-pub struct ArrayD<A, S: FixedShape>(ArrayCore<DynSized<A>, S>);
+pub struct ArrayD<A, S: CShape, L: TLayout = RowMajor>(ArrayCore<DynSized<A>, S, L>);
 
-impl<A, S: FixedShape> ArrayD<A, S>
+impl<A, S, L: TLayout> ArrayD<A, S, L>
 where
-    [(); <S as FixedShape>::N_ELEMS]:,
+    L: TLayout,
+    S: CShape,
+    [(); <S as CShape>::N_ELEMS]:,
 {
     /// Creates a new array.
-    pub fn new(data: [A; <S as FixedShape>::N_ELEMS]) -> Self {
+    pub fn new(data: [A; <S as CShape>::N_ELEMS]) -> Self {
+        let strides = match L::LAYOUT {
+            Layout::RowMajor => <S as CShape>::ROW_MAJOR_STRIDES,
+            Layout::ColumnMajor => <S as CShape>::COLUMN_MAJOR_STRIDES,
+        };
         Self(ArrayCore {
             data: DynSized(Vec::from(data)),
-            shape: <S as FixedShape>::SHAPE,
-            strides: <S as FixedShape>::STRIDES,
+            shape: <S as CShape>::SHAPE,
+            strides,
+            layout: L::LAYOUT,
+            _marker: std::marker::PhantomData,
         })
     }
 }
 
-impl<A, S> Debug for ArrayD<A, S>
+impl<A, S, L> Debug for ArrayD<A, S, L>
 where
-    S: FixedShape,
-    <S as Shape>::UnderlyingType: Debug,
-    [(); <S as FixedShape>::N_ELEMS]:,
+    L: TLayout,
+    S: CShape,
+    <S as CShape>::UnderlyingType: Debug,
+    [(); <S as CShape>::N_ELEMS]:,
     A: Debug,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -31,31 +40,35 @@ where
             .field("data", &self.data)
             .field("shape", &self.shape)
             .field("strides", &self.strides)
+            .field("layout", &self.layout)
             .finish()
     }
 }
 
 mod ops {
     use super::ArrayD;
-    use crate::core::{FixedShape, Scalar, ArrayCore, DynSized};
+    use crate::core::{CShape, Scalar, ArrayCore, DynSized, TLayout};
     use core::ops::{Add, BitAnd, BitOr, BitXor, Deref, DerefMut, Div, Mul, Rem, Shl, Shr, Sub};
+    use crate::Layout;
 
-    impl<A, S> Deref for ArrayD<A, S>
+    impl<A, S, L> Deref for ArrayD<A, S, L>
     where
-        S: FixedShape,
-        [(); <S as FixedShape>::N_ELEMS]:,
+        L: TLayout,
+        S: CShape,
+        [(); <S as CShape>::N_ELEMS]:,
     {
-        type Target = ArrayCore<DynSized<A>, S>;
+        type Target = ArrayCore<DynSized<A>, S, L>;
 
         fn deref(&self) -> &Self::Target {
             &self.0
         }
     }
 
-    impl<A, S> DerefMut for ArrayD<A, S>
+    impl<A, S, L> DerefMut for ArrayD<A, S, L>
     where
-        S: FixedShape,
-        [(); <S as FixedShape>::N_ELEMS]:,
+        L: TLayout,
+        S: CShape,
+        [(); <S as CShape>::N_ELEMS]:,
     {
         fn deref_mut(&mut self) -> &mut Self::Target {
             &mut self.0
@@ -63,12 +76,13 @@ mod ops {
     }
 
     macro impl_array_d_binary_op($tr:ident, $mth:ident) {
-        impl<A, B, S> $tr<B> for ArrayD<A, S>
+        impl<A, B, S, L> $tr<B> for ArrayD<A, S, L>
         where
             A: $tr<B, Output = A> + Clone,
             B: Scalar,
-            S: FixedShape,
-            [(); <S as FixedShape>::N_ELEMS]:,
+            L: TLayout,
+            S: CShape,
+            [(); <S as CShape>::N_ELEMS]:,
         {
             type Output = Self;
 
@@ -77,19 +91,19 @@ mod ops {
             }
         }
 
-        impl<'a, A, B, S> $tr<B> for &'a ArrayD<A, S>
-        where
-            A: $tr<B, Output = A> + Clone,
-            B: Scalar,
-            S: FixedShape,
-            [(); <S as FixedShape>::N_ELEMS]:,
-        {
-            type Output = ArrayD<A, S>;
-
-            fn $mth(self, rhs: B) -> Self::Output {
-                ArrayD(self.0.$mth(rhs))
-            }
-        }
+        // impl<'a, A, B, S> $tr<B> for &'a ArrayD<A, S>
+        // where
+        //     A: $tr<B, Output = A> + Clone,
+        //     B: Scalar,
+        //     S: FixedShape,
+        //     [(); <S as FixedShape>::N_ELEMS]:,
+        // {
+        //     type Output = ArrayD<A, S>;
+        //
+        //     fn $mth(self, rhs: B) -> Self::Output {
+        //         ArrayD(self.0.$mth(rhs))
+        //     }
+        // }
     }
 
     impl_array_d_binary_op!(Add, add);
@@ -109,17 +123,17 @@ pub use ops::*;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::cs;
+    use crate::core::s;
 
     #[test]
     fn n_elems() {
-        let array: ArrayD<f32, cs!(3, 2, 4)> = ArrayD::new([0.0; 24]);
+        let array: ArrayD<f32, s!(3, 2, 4)> = ArrayD::new([0.0; 24]);
         assert_eq!(array.n_elems(), 24);
     }
 
     #[test]
     fn add() {
-        let array: ArrayD<f32, cs!(3, 2, 3)> = ArrayD::new([0.0; 18]);
+        let array: ArrayD<f32, s!(3, 2, 3)> = ArrayD::new([0.0; 18]);
         let array = array + 1.0;
         assert_eq!(array.data.as_slice(), &[1.0; 18]);
     }
