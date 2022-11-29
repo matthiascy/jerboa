@@ -44,22 +44,23 @@ macro impl_binary_op($tr:ident, $op:tt, $mth:ident) {
     // }
 }
 
-// impl<'a, A, B, D, S> Add<B> for &'a ArrayCore<D, S>
-//     where A: Add<B, Output = A> + Clone,
-//           B: Scalar,
-//           D: DataMut<Elem = A>,
-//           S: Shape,
-// {
-//     type Output = ArrayCore<D, S>;
-//
-//     fn add(self, rhs: B) -> Self::Output {
-//         let mut data = self.data.clone();
-//         for elem in data.as_mut_slice() {
-//             *elem = elem.clone() + rhs.clone();
-//         }
-//         array
-//     }
-// }
+impl<'a, A, B, D, S, L> Add<B> for &'a ArrayCore<D, S, L>
+    where A: Add<B, Output = A> + Clone,
+          B: Scalar,
+          D: DataMut<Elem = A>,
+          L: TLayout,
+          S: Shape,
+{
+    type Output = ArrayCore<D, S>;
+
+    fn add(self, rhs: B) -> Self::Output {
+        let mut data = self.data.clone();
+        for elem in data.as_mut_slice() {
+            *elem = elem.clone() + rhs.clone();
+        }
+        array
+    }
+}
 
 impl_binary_op!(Add, +, add);
 impl_binary_op!(Sub, -, sub);

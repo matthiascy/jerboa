@@ -7,6 +7,7 @@
 #![feature(decl_macro)]
 #![feature(generic_const_exprs)]
 #![feature(const_trait_impl)]
+#![feature(const_maybe_uninit_as_mut_ptr)]
 
 mod array;
 mod axis;

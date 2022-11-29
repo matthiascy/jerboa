@@ -33,7 +33,7 @@ where
     pub(crate) layout: Layout,
 
     /// The marker for the layout.
-    pub(crate) _marker: std::marker::PhantomData<L>,
+    pub(crate) _marker: std::marker::PhantomData<(D, L, S)>,
 }
 
 impl<D, S, L> ArrayCore<D, S, L>
