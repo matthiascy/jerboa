@@ -9,10 +9,10 @@ pub use data::*;
 pub(crate) use sealed::Sealed;
 pub use shape::*;
 
-use std::fmt::{Debug, Error, Formatter};
+use core::fmt::{Debug, Error, Formatter};
 
 /// A n-dimensional array.
-pub struct ArrayCore<D, S, L = RowMajor>
+pub struct ArrRaw<D, S, L = RowMajor>
 where
     D: DataRaw,
     L: TLayout,
@@ -36,12 +36,23 @@ where
     pub(crate) _marker: std::marker::PhantomData<(D, L, S)>,
 }
 
-impl<D, S, L> ArrayCore<D, S, L>
+impl<D, S, L> ArrRaw<D, S, L>
 where
     D: DataRaw,
     L: TLayout,
     S: Shape,
 {
+    /// Creates an empty array.
+    pub fn new(shape) -> Self {
+        Self {
+            data: D::new(),
+            shape: S::UnderlyingType::new(),
+            strides: S::UnderlyingType::new(),
+            layout: ,
+            _marker: std::marker::PhantomData,
+        }
+    }
+
     /// Returns the number of elements in the array.
     pub fn n_elems(&self) -> usize {
         if let Some(n) = S::N_ELEMS {
@@ -76,7 +87,7 @@ where
     }
 }
 
-impl<D, S, L> Debug for ArrayCore<D, S, L>
+impl<D, S, L> Debug for ArrRaw<D, S, L>
 where
     D: DataRaw + Debug,
     L: TLayout,
@@ -93,7 +104,7 @@ where
     }
 }
 
-impl<D0, D1, S0, S1, L0, L1, E> PartialEq<ArrayCore<D1, S1, L1>> for ArrayCore<D0, S0, L0>
+impl<D0, D1, S0, S1, L0, L1, E> PartialEq<ArrRaw<D1, S1, L1>> for ArrRaw<D0, S0, L0>
 where
     D0: DataRaw<Elem = E>,
     D1: DataRaw<Elem = E>,
@@ -103,7 +114,7 @@ where
     S0: Shape,
     S1: Shape,
 {
-    fn eq(&self, other: &ArrayCore<D1, S1, L1>) -> bool {
+    fn eq(&self, other: &ArrRaw<D1, S1, L1>) -> bool {
         let have_same_layout = self.layout == other.layout;
 
         if have_same_layout {
@@ -142,7 +153,7 @@ where
 
 #[test]
 fn test_array_core_eq() {
-    let a: ArrayCore<FixedSized<u32, 16>, s!(4, 4)> = ArrayCore {
+    let a: ArrRaw<FixedSized<u32, 16>, s!(4, 4)> = ArrRaw {
         data: FixedSized([1; 16]),
         shape: <s!(4, 4) as Shape>::shape(),
         strides: <s!(4, 4) as Shape>::row_major_strides(),
@@ -150,7 +161,7 @@ fn test_array_core_eq() {
         _marker: Default::default(),
     };
 
-    let b: ArrayCore<FixedSized<u32, 16>, s!(4, 4)> = ArrayCore {
+    let b: ArrRaw<FixedSized<u32, 16>, s!(4, 4)> = ArrRaw {
         data: FixedSized([1; 16]),
         shape: <s!(4, 4) as Shape>::shape(),
         strides: <s!(4, 4) as Shape>::column_major_strides(),
@@ -159,7 +170,7 @@ fn test_array_core_eq() {
     };
     assert_eq!(a, b);
 
-    let c: ArrayCore<FixedSized<u32, 12>, s!(4, 3)> = ArrayCore {
+    let c: ArrRaw<FixedSized<u32, 12>, s!(4, 3)> = ArrRaw {
         data: FixedSized([1; 12]),
         shape: <s!(4, 3) as Shape>::shape(),
         strides: <s!(4, 3) as Shape>::row_major_strides(),
@@ -167,7 +178,7 @@ fn test_array_core_eq() {
         _marker: Default::default(),
     };
 
-    let d: ArrayCore<FixedSized<u32, 12>, s!(3, 4)> = ArrayCore {
+    let d: ArrRaw<FixedSized<u32, 12>, s!(3, 4)> = ArrRaw {
         data: FixedSized([1; 12]),
         shape: <s!(3, 4) as Shape>::shape(),
         strides: <s!(3, 4) as Shape>::column_major_strides(),

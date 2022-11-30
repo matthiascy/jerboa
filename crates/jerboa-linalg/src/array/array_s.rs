@@ -1,9 +1,9 @@
-use crate::core::{ArrayCore, CShape, FixedSized, Layout, RowMajor, Scalar, TLayout};
-use std::fmt::{Debug, Formatter};
+use crate::core::{ArrRaw, CShape, FixedSized, Layout, RowMajor, Scalar, TLayout};
+use core::fmt::{Debug, Formatter};
 
 /// Fix-sized array on the stack.
 #[repr(transparent)]
-pub struct Array<A, S, L = RowMajor>(ArrayCore<FixedSized<A, { <S as CShape>::N_ELEMS }>, S, L>)
+pub struct Array<A, S, L = RowMajor>(ArrRaw<FixedSized<A, { <S as CShape>::N_ELEMS }>, S, L>)
 where
     L: TLayout,
     S: CShape,
@@ -21,7 +21,7 @@ where
             Layout::RowMajor => <S as CShape>::ROW_MAJOR_STRIDES,
             Layout::ColumnMajor => <S as CShape>::COLUMN_MAJOR_STRIDES,
         };
-        Self(ArrayCore {
+        Self(ArrRaw {
             data: FixedSized(data),
             shape: <S as CShape>::SHAPE,
             strides,
@@ -95,7 +95,7 @@ mod ops {
             S: CShape,
             [(); <S as CShape>::N_ELEMS]:,
     {
-        type Target = ArrayCore<FixedSized<A, { <S as CShape>::N_ELEMS }>, S, L>;
+        type Target = ArrRaw<FixedSized<A, { <S as CShape>::N_ELEMS }>, S, L>;
 
         fn deref(&self) -> &Self::Target {
             &self.0

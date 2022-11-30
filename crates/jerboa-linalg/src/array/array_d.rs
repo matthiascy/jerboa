@@ -1,9 +1,9 @@
-use crate::core::{ArrayCore, CShape, DynSized, Layout, RowMajor, TLayout};
-use std::fmt::{Debug, Formatter};
+use crate::core::{ArrRaw, CShape, DynSized, Layout, RowMajor, TLayout};
+use core::fmt::{Debug, Formatter};
 
 /// Fix-sized array on the heap.
 #[repr(transparent)]
-pub struct ArrayD<A, S: CShape, L: TLayout = RowMajor>(ArrayCore<DynSized<A>, S, L>);
+pub struct ArrayD<A, S: CShape, L: TLayout = RowMajor>(ArrRaw<DynSized<A>, S, L>);
 
 impl<A, S, L> ArrayD<A, S, L>
 where
@@ -17,12 +17,12 @@ where
             Layout::RowMajor => <S as CShape>::ROW_MAJOR_STRIDES,
             Layout::ColumnMajor => <S as CShape>::COLUMN_MAJOR_STRIDES,
         };
-        Self(ArrayCore {
+        Self(ArrRaw {
             data: DynSized(Vec::from(data)),
             shape: <S as CShape>::SHAPE,
             strides,
             layout: L::LAYOUT,
-            _marker: std::marker::PhantomData,
+            _marker: core::marker::PhantomData,
         })
     }
 }
@@ -35,7 +35,7 @@ where
     [(); <S as CShape>::N_ELEMS]:,
     A: Debug,
 {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("ArrayD")
             .field("data", &self.data)
             .field("shape", &self.shape)
@@ -47,7 +47,7 @@ where
 
 mod ops {
     use super::ArrayD;
-    use crate::core::{ArrayCore, CShape, DynSized, Scalar, TLayout};
+    use crate::core::{ArrRaw, CShape, DynSized, Scalar, TLayout};
     use core::ops::{Add, BitAnd, BitOr, BitXor, Deref, DerefMut, Div, Mul, Rem, Shl, Shr, Sub};
 
     impl<A, S, L> Deref for ArrayD<A, S, L>
@@ -56,7 +56,7 @@ mod ops {
         S: CShape,
         [(); <S as CShape>::N_ELEMS]:,
     {
-        type Target = ArrayCore<DynSized<A>, S, L>;
+        type Target = ArrRaw<DynSized<A>, S, L>;
 
         fn deref(&self) -> &Self::Target {
             &self.0

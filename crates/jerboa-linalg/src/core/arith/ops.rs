@@ -1,5 +1,6 @@
-use crate::core::{arith::Scalar, ArrayCore, DataMut, Shape, TLayout};
+use crate::core::{Scalar, ArrRaw, DataMut, Shape, TLayout, DataRawMut};
 use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Rem, Shl, Shr, Sub};
+use core::ptr;
 
 // todo:
 //  + scalar left hand side ops
@@ -44,25 +45,28 @@ macro impl_binary_op($tr:ident, $op:tt, $mth:ident) {
     // }
 }
 
-impl<'a, A, B, D, S, L> Add<B> for &'a ArrayCore<D, S, L>
+impl<A, B, D, S, L> Add<B> for ArrRaw<D, S, L>
     where A: Add<B, Output = A> + Clone,
           B: Scalar,
-          D: DataMut<Elem = A>,
+          D: DataRawMut<Elem = A>,
           L: TLayout,
-          S: Shape,
+          S: Shape
 {
-    type Output = ArrayCore<D, S>;
+    type Output = Self;
 
     fn add(self, rhs: B) -> Self::Output {
-        let mut data = self.data.clone();
-        for elem in data.as_mut_slice() {
-            *elem = elem.clone() + rhs.clone();
+        let n_elems = self.n_elems();
+        for i in 0..n_elems {
+            unsafe {
+                let elem = ptr::read(self.data.as_ptr());
+                ptr::write(self.data.as_mut_ptr(), elem + rhs.clone());
+            }
         }
-        array
+        self
     }
 }
 
-impl_binary_op!(Add, +, add);
+// impl_binary_op!(Add, +, add);
 impl_binary_op!(Sub, -, sub);
 impl_binary_op!(Mul, *, mul);
 impl_binary_op!(Div, /, div);

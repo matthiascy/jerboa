@@ -51,7 +51,7 @@ unsafe impl<A, const N: usize> DataMut for FixedSized<A, N> {
 
 impl<A: Debug, const N: usize> Debug for FixedSized<A, N> {
     #[inline]
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.write_fmt(format_args!("FixedSized({:?})", self.0))
     }
 }
@@ -80,7 +80,7 @@ mod tests {
     #[test]
     fn debug_display() {
         let a = FixedSized([1, 2, 3]);
-        assert_eq!(format!("{:?}", a), "FixedSized([1, 2, 3])");
-        assert_eq!(format!("{}", a), "[1, 2, 3]");
+        assert_eq!(alloc::format!("{:?}", a), "FixedSized([1, 2, 3])");
+        assert_eq!(alloc::format!("{}", a), "[1, 2, 3]");
     }
 }

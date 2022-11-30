@@ -1,5 +1,5 @@
 use crate::core::{
-    calc_n_elems, calc_strides, ArrayCore, DynSized, DynamicShape, RowMajor, Scalar, Shape, TLayout,
+    calc_n_elems, calc_strides, ArrRaw, DynSized, DynamicShape, RowMajor, Scalar, Shape, TLayout,
 };
 use core::{
     fmt::{Debug, Error, Formatter},
@@ -8,7 +8,7 @@ use core::{
 
 /// Dynamic-sized array on the heap.
 #[repr(transparent)]
-pub struct ArrayDyn<A, L: TLayout = RowMajor>(ArrayCore<DynSized<A>, DynamicShape, L>);
+pub struct ArrayDyn<A, L: TLayout = RowMajor>(ArrRaw<DynSized<A>, DynamicShape, L>);
 
 impl<A, L: TLayout> ArrayDyn<A, L> {
     /// Creates a new empty array.
@@ -21,7 +21,7 @@ impl<A, L: TLayout> ArrayDyn<A, L> {
         let shape: <DynamicShape as Shape>::UnderlyingType = shape.to_vec();
         let mut strides = shape.clone();
         calc_strides(&shape, &mut strides, L::LAYOUT);
-        Self(ArrayCore {
+        Self(ArrRaw {
             data: DynSized(Vec::with_capacity(calc_n_elems(&shape))),
             shape,
             strides,
@@ -40,7 +40,7 @@ impl<A, L: TLayout> ArrayDyn<A, L> {
         let shape: <DynamicShape as Shape>::UnderlyingType = shape.to_vec();
         let mut strides = shape.clone();
         calc_strides(&shape, &mut strides, L::LAYOUT);
-        Self(ArrayCore {
+        Self(ArrRaw {
             data: DynSized(data),
             shape,
             strides,
@@ -62,7 +62,7 @@ impl<A, L: TLayout> ArrayDyn<A, L> {
         let shape: <DynamicShape as Shape>::UnderlyingType = shape.to_vec();
         let mut strides = shape.clone();
         calc_strides(&shape, &mut strides, L::LAYOUT);
-        Self(ArrayCore {
+        Self(ArrRaw {
             data: DynSized(data.to_vec()),
             shape,
             strides,
@@ -95,7 +95,7 @@ where
 }
 
 impl<A, L: TLayout> Deref for ArrayDyn<A, L> {
-    type Target = ArrayCore<DynSized<A>, DynamicShape, L>;
+    type Target = ArrRaw<DynSized<A>, DynamicShape, L>;
 
     fn deref(&self) -> &Self::Target {
         &self.0

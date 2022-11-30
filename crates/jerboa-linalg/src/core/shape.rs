@@ -1,5 +1,6 @@
 use crate::core::Layout;
-use std::marker::PhantomData;
+use core::marker::PhantomData;
+use alloc::vec::Vec;
 
 pub trait ShapeStorage {
     fn as_slice(&self) -> &[usize];

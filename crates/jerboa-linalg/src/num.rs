@@ -1,4 +1,4 @@
-use std::{
+use core::{
     num::FpCategory,
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Sub, SubAssign},
 };
@@ -369,5 +369,5 @@ macro_rules! impl_integral {
 impl_num_trait!(@signed { i8 i16 i32 i64 isize }, 0, 1);
 impl_num_trait!(@signed { f32 f64 }, 0.0, 1.0);
 impl_num_trait!(@unsigned { u8 u16 u32 u64 usize }, 0, 1);
-impl_floating!(f32, std::f32::consts, f64, std::f64::consts);
+impl_floating!(f32, core::f32::consts, f64, core::f64::consts);
 impl_integral!(i8 i16 i32 i64 isize u8 u16 u32 u64 usize);

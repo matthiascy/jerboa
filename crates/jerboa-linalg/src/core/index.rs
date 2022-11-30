@@ -1,5 +1,5 @@
-use crate::core::{ArrayCore, CShape, Data, ShapeStorage};
-use std::ops::Index;
+// use crate::core::{ArrayCore, CShape, Data, ShapeStorage};
+// use core::ops::Index;
 
 // Array indexes are always written row-first.
 // Indexing returns ArrayView.

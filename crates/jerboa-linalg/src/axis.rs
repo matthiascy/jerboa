@@ -1,4 +1,4 @@
-use std::ops::{Index, IndexMut};
+use core::ops::{Index, IndexMut};
 
 /// 3-dimensional axis.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

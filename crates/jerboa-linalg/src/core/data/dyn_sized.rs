@@ -51,7 +51,7 @@ unsafe impl<A> DataMut for DynSized<A> {
 
 impl<A: Debug> Debug for DynSized<A> {
     #[inline]
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         f.write_fmt(format_args!("DynSized({:?})", self.0))
     }
 }
@@ -92,8 +92,8 @@ mod tests {
 
     #[test]
     fn debug_display() {
-        let storage = DynSized(vec![1, 2, 3]);
-        assert_eq!(format!("{:?}", storage), "DynSized([1, 2, 3])");
-        assert_eq!(format!("{}", storage), "[1, 2, 3]");
+        let storage = DynSized(alloc::vec![1, 2, 3]);
+        assert_eq!(alloc::format!("{:?}", storage), "DynSized([1, 2, 3])");
+        assert_eq!(alloc::format!("{}", storage), "[1, 2, 3]");
     }
 }
