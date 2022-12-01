@@ -1,5 +1,6 @@
 use crate::core::{
-    calc_n_elems, calc_strides, ArrRaw, DynSized, DynamicShape, RowMajor, Scalar, Shape, TLayout,
+    compute_num_elems, compute_strides, ArrCore, DynSized, DynamicShape, RowMajor, Scalar, Shape,
+    TLayout,
 };
 use core::{
     fmt::{Debug, Error, Formatter},
@@ -8,7 +9,7 @@ use core::{
 
 /// Dynamic-sized array on the heap.
 #[repr(transparent)]
-pub struct ArrayDyn<A, L: TLayout = RowMajor>(ArrRaw<DynSized<A>, DynamicShape, L>);
+pub struct ArrayDyn<A, L: TLayout = RowMajor>(ArrCore<DynSized<A>, DynamicShape, L>);
 
 impl<A, L: TLayout> ArrayDyn<A, L> {
     /// Creates a new empty array.
@@ -20,9 +21,9 @@ impl<A, L: TLayout> ArrayDyn<A, L> {
     pub fn empty(shape: &[usize]) -> Self {
         let shape: <DynamicShape as Shape>::UnderlyingType = shape.to_vec();
         let mut strides = shape.clone();
-        calc_strides(&shape, &mut strides, L::LAYOUT);
-        Self(ArrRaw {
-            data: DynSized(Vec::with_capacity(calc_n_elems(&shape))),
+        compute_strides(&shape, &mut strides, L::LAYOUT);
+        Self(ArrCore {
+            data: DynSized(Vec::with_capacity(compute_num_elems(&shape))),
             shape,
             strides,
             layout: L::LAYOUT,
@@ -33,14 +34,14 @@ impl<A, L: TLayout> ArrayDyn<A, L> {
     /// Creates a new array from a vector.
     pub fn from_vec(shape: &[usize], data: Vec<A>) -> Self {
         assert_eq!(
-            calc_n_elems(shape),
+            compute_num_elems(shape),
             data.len(),
             "data length must match array size"
         );
         let shape: <DynamicShape as Shape>::UnderlyingType = shape.to_vec();
         let mut strides = shape.clone();
-        calc_strides(&shape, &mut strides, L::LAYOUT);
-        Self(ArrRaw {
+        compute_strides(&shape, &mut strides, L::LAYOUT);
+        Self(ArrCore {
             data: DynSized(data),
             shape,
             strides,
@@ -55,14 +56,14 @@ impl<A, L: TLayout> ArrayDyn<A, L> {
         A: Clone,
     {
         assert_eq!(
-            calc_n_elems(shape),
+            compute_num_elems(shape),
             data.len(),
             "data length must match array size"
         );
         let shape: <DynamicShape as Shape>::UnderlyingType = shape.to_vec();
         let mut strides = shape.clone();
-        calc_strides(&shape, &mut strides, L::LAYOUT);
-        Self(ArrRaw {
+        compute_strides(&shape, &mut strides, L::LAYOUT);
+        Self(ArrCore {
             data: DynSized(data.to_vec()),
             shape,
             strides,
@@ -72,7 +73,7 @@ impl<A, L: TLayout> ArrayDyn<A, L> {
     }
 
     pub fn n_elems(&self) -> usize {
-        calc_n_elems(&self.shape)
+        compute_num_elems(&self.shape)
     }
 
     pub fn strides(&self) -> &[usize] {
@@ -95,7 +96,7 @@ where
 }
 
 impl<A, L: TLayout> Deref for ArrayDyn<A, L> {
-    type Target = ArrRaw<DynSized<A>, DynamicShape, L>;
+    type Target = ArrCore<DynSized<A>, DynamicShape, L>;
 
     fn deref(&self) -> &Self::Target {
         &self.0

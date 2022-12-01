@@ -12,7 +12,7 @@ pub use shape::*;
 use core::fmt::{Debug, Error, Formatter};
 
 /// A n-dimensional array.
-pub struct ArrRaw<D, S, L = RowMajor>
+pub struct ArrCore<D, S, L = RowMajor>
 where
     D: DataRaw,
     L: TLayout,
@@ -36,29 +36,48 @@ where
     pub(crate) _marker: std::marker::PhantomData<(D, L, S)>,
 }
 
-impl<D, S, L> ArrRaw<D, S, L>
+impl<D, S, L> ArrCore<D, S, L>
+where
+    D: Data,
+    L: TLayout,
+    S: Shape,
+    S::UnderlyingType: DimSeq,
+{
+    /// Creates a new array with the given data, shape, strides, and layout.
+    ///
+    /// Rarely used directly. Only used inside the crate for testing.
+    pub fn new(shape: S::UnderlyingType, data: D, layout: Layout) -> Self {
+        // Make sure the data is the right size.
+        assert!(
+            data.as_slice().len() == compute_num_elems(shape.as_slice()),
+            "data is the wrong size"
+        );
+        assert!(L::LAYOUT == layout, "layouts don't match");
+
+        let mut strides = shape.clone();
+        compute_strides(shape.as_slice(), strides.as_slice_mut(), layout);
+        Self {
+            data,
+            shape,
+            strides,
+            layout,
+            _marker: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<D, S, L> ArrCore<D, S, L>
 where
     D: DataRaw,
     L: TLayout,
     S: Shape,
 {
-    /// Creates an empty array.
-    pub fn new(shape) -> Self {
-        Self {
-            data: D::new(),
-            shape: S::UnderlyingType::new(),
-            strides: S::UnderlyingType::new(),
-            layout: ,
-            _marker: std::marker::PhantomData,
-        }
-    }
-
     /// Returns the number of elements in the array.
     pub fn n_elems(&self) -> usize {
         if let Some(n) = S::N_ELEMS {
             n
         } else {
-            calc_n_elems(self.shape.as_slice())
+            compute_num_elems(self.shape.as_slice())
         }
     }
 
@@ -87,7 +106,23 @@ where
     }
 }
 
-impl<D, S, L> Debug for ArrRaw<D, S, L>
+impl<D, S, L> Clone for ArrCore<D, S, L>
+    where D: DataClone,
+          L: TLayout,
+          S: Shape,
+{
+    fn clone(&self) -> Self {
+        Self {
+            data: self.data.clone(),
+            shape: self.shape.clone(),
+            strides: self.strides.clone(),
+            layout: self.layout,
+            _marker: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<D, S, L> Debug for ArrCore<D, S, L>
 where
     D: DataRaw + Debug,
     L: TLayout,
@@ -104,7 +139,7 @@ where
     }
 }
 
-impl<D0, D1, S0, S1, L0, L1, E> PartialEq<ArrRaw<D1, S1, L1>> for ArrRaw<D0, S0, L0>
+impl<D0, D1, S0, S1, L0, L1, E> PartialEq<ArrCore<D1, S1, L1>> for ArrCore<D0, S0, L0>
 where
     D0: DataRaw<Elem = E>,
     D1: DataRaw<Elem = E>,
@@ -114,7 +149,7 @@ where
     S0: Shape,
     S1: Shape,
 {
-    fn eq(&self, other: &ArrRaw<D1, S1, L1>) -> bool {
+    fn eq(&self, other: &ArrCore<D1, S1, L1>) -> bool {
         let have_same_layout = self.layout == other.layout;
 
         if have_same_layout {
@@ -151,41 +186,57 @@ where
     }
 }
 
-#[test]
-fn test_array_core_eq() {
-    let a: ArrRaw<FixedSized<u32, 16>, s!(4, 4)> = ArrRaw {
-        data: FixedSized([1; 16]),
-        shape: <s!(4, 4) as Shape>::shape(),
-        strides: <s!(4, 4) as Shape>::row_major_strides(),
-        layout: Layout::RowMajor,
-        _marker: Default::default(),
-    };
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    let b: ArrRaw<FixedSized<u32, 16>, s!(4, 4)> = ArrRaw {
-        data: FixedSized([1; 16]),
-        shape: <s!(4, 4) as Shape>::shape(),
-        strides: <s!(4, 4) as Shape>::column_major_strides(),
-        layout: Layout::ColumnMajor,
-        _marker: Default::default(),
-    };
-    assert_eq!(a, b);
 
-    let c: ArrRaw<FixedSized<u32, 12>, s!(4, 3)> = ArrRaw {
-        data: FixedSized([1; 12]),
-        shape: <s!(4, 3) as Shape>::shape(),
-        strides: <s!(4, 3) as Shape>::row_major_strides(),
-        layout: Layout::RowMajor,
-        _marker: Default::default(),
-    };
+    #[test]
+    fn test_arr_raw_new() {
+        let a: ArrCore<FixedSized<i32, 6>, s!(2, 3), RowMajor> =
+            ArrCore::new([2, 3], FixedSized([1, 2, 3, 4, 5, 6]), Layout::RowMajor);
+        assert_eq!(a.shape(), &[2, 3]);
+        assert_eq!(a.strides(), &[3, 1]);
+        assert_eq!(a.layout(), Layout::RowMajor);
+        assert_eq!(a.data.as_slice(), &[1, 2, 3, 4, 5, 6]);
+    }
 
-    let d: ArrRaw<FixedSized<u32, 12>, s!(3, 4)> = ArrRaw {
-        data: FixedSized([1; 12]),
-        shape: <s!(3, 4) as Shape>::shape(),
-        strides: <s!(3, 4) as Shape>::column_major_strides(),
-        layout: Layout::ColumnMajor,
-        _marker: Default::default(),
-    };
+    #[test]
+    fn test_arr_raw_eq() {
+        let a: ArrCore<FixedSized<u32, 16>, s!(4, 4)> = ArrCore {
+            data: FixedSized([1; 16]),
+            shape: <s!(4, 4) as Shape>::shape(),
+            strides: <s!(4, 4) as Shape>::row_major_strides(),
+            layout: Layout::RowMajor,
+            _marker: Default::default(),
+        };
 
-    assert_eq!(c, d);
-    assert_ne!(a, c);
+        let b: ArrCore<FixedSized<u32, 16>, s!(4, 4)> = ArrCore {
+            data: FixedSized([1; 16]),
+            shape: <s!(4, 4) as Shape>::shape(),
+            strides: <s!(4, 4) as Shape>::column_major_strides(),
+            layout: Layout::ColumnMajor,
+            _marker: Default::default(),
+        };
+        assert_eq!(a, b);
+
+        let c: ArrCore<FixedSized<u32, 12>, s!(4, 3)> = ArrCore {
+            data: FixedSized([1; 12]),
+            shape: <s!(4, 3) as Shape>::shape(),
+            strides: <s!(4, 3) as Shape>::row_major_strides(),
+            layout: Layout::RowMajor,
+            _marker: Default::default(),
+        };
+
+        let d: ArrCore<FixedSized<u32, 12>, s!(3, 4)> = ArrCore {
+            data: FixedSized([1; 12]),
+            shape: <s!(3, 4) as Shape>::shape(),
+            strides: <s!(3, 4) as Shape>::column_major_strides(),
+            layout: Layout::ColumnMajor,
+            _marker: Default::default(),
+        };
+
+        assert_eq!(c, d);
+        assert_ne!(a, c);
+    }
 }

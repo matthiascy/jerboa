@@ -57,6 +57,7 @@ pub unsafe trait DataRaw: Sized + Sealed {
 /// Trait providing slice access to the elements of the storage, implemented by
 /// all storage types.
 pub unsafe trait Data: DataRaw {
+    /// Get a slice of the elements of the storage.
     fn as_slice(&self) -> &[Self::Elem];
 }
 
@@ -74,6 +75,10 @@ pub unsafe trait DataRawMut: DataRaw {
 pub unsafe trait DataMut: Data + DataRawMut {
     fn as_mut_slice(&mut self) -> &mut [Self::Elem];
 }
+
+pub trait DataClone: Data + DataMut + Clone {}
+
+impl<T: Clone> DataClone for T where T: Data + DataMut {}
 
 pub(crate) fn display_slice<T: core::fmt::Display>(
     f: &mut core::fmt::Formatter<'_>,

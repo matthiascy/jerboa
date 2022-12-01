@@ -1,9 +1,9 @@
-use crate::core::{ArrRaw, CShape, DynSized, Layout, RowMajor, TLayout};
+use crate::core::{ArrCore, CShape, DynSized, Layout, RowMajor, TLayout};
 use core::fmt::{Debug, Formatter};
 
 /// Fix-sized array on the heap.
 #[repr(transparent)]
-pub struct ArrayD<A, S: CShape, L: TLayout = RowMajor>(ArrRaw<DynSized<A>, S, L>);
+pub struct ArrayD<A, S: CShape, L: TLayout = RowMajor>(ArrCore<DynSized<A>, S, L>);
 
 impl<A, S, L> ArrayD<A, S, L>
 where
@@ -17,7 +17,7 @@ where
             Layout::RowMajor => <S as CShape>::ROW_MAJOR_STRIDES,
             Layout::ColumnMajor => <S as CShape>::COLUMN_MAJOR_STRIDES,
         };
-        Self(ArrRaw {
+        Self(ArrCore {
             data: DynSized(Vec::from(data)),
             shape: <S as CShape>::SHAPE,
             strides,
@@ -47,7 +47,7 @@ where
 
 mod ops {
     use super::ArrayD;
-    use crate::core::{ArrRaw, CShape, DynSized, Scalar, TLayout};
+    use crate::core::{ArrCore, CShape, DynSized, Scalar, TLayout};
     use core::ops::{Add, BitAnd, BitOr, BitXor, Deref, DerefMut, Div, Mul, Rem, Shl, Shr, Sub};
 
     impl<A, S, L> Deref for ArrayD<A, S, L>
@@ -56,7 +56,7 @@ mod ops {
         S: CShape,
         [(); <S as CShape>::N_ELEMS]:,
     {
-        type Target = ArrRaw<DynSized<A>, S, L>;
+        type Target = ArrCore<DynSized<A>, S, L>;
 
         fn deref(&self) -> &Self::Target {
             &self.0
@@ -90,19 +90,20 @@ mod ops {
             }
         }
 
-        // impl<'a, A, B, S> $tr<B> for &'a ArrayD<A, S>
-        // where
-        //     A: $tr<B, Output = A> + Clone,
-        //     B: Scalar,
-        //     S: FixedShape,
-        //     [(); <S as FixedShape>::N_ELEMS]:,
-        // {
-        //     type Output = ArrayD<A, S>;
-        //
-        //     fn $mth(self, rhs: B) -> Self::Output {
-        //         ArrayD(self.0.$mth(rhs))
-        //     }
-        // }
+        impl<'a, A, B, S, L> $tr<B> for &'a Array<A, S, L>
+            where
+                A: $tr<B, Output = A> + Clone,
+                B: Scalar,
+                L: TLayout,
+                S: CShape,
+                [(); <S as CShape>::N_ELEMS]:,
+        {
+            type Output = Array<A, S, L>;
+
+            fn $mth(self, rhs: B) -> Self::Output {
+                Array::<A, S, L>(&self.0 $op rhs)
+            }
+        }
     }
 
     impl_array_d_binary_op!(Add, add);

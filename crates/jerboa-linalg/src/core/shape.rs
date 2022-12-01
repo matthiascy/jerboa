@@ -1,15 +1,22 @@
 use crate::core::Layout;
 use core::marker::PhantomData;
-use alloc::vec::Vec;
 
-pub trait ShapeStorage {
+/// Dimension sequence.
+///
+/// Trait for types that can be used as shape for an array.
+pub trait DimSeq: Clone {
     fn as_slice(&self) -> &[usize];
+    fn as_slice_mut(&mut self) -> &mut [usize];
 }
 
 macro impl_shape_storage($($n:expr),+) {
     $(
-        impl ShapeStorage for [usize; $n] {
+        impl DimSeq for [usize; $n] {
             fn as_slice(&self) -> &[usize] {
+                self
+            }
+
+            fn as_slice_mut(&mut self) -> &mut [usize] {
                 self
             }
         }
@@ -18,8 +25,12 @@ macro impl_shape_storage($($n:expr),+) {
 
 impl_shape_storage!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16);
 
-impl ShapeStorage for Vec<usize> {
+impl DimSeq for Vec<usize> {
     fn as_slice(&self) -> &[usize] {
+        self
+    }
+
+    fn as_slice_mut(&mut self) -> &mut [usize] {
         self
     }
 }
@@ -31,8 +42,8 @@ impl ShapeStorage for Vec<usize> {
 /// defined const shape type. See `ConstShape` for more details.
 #[const_trait]
 pub trait CShape {
-    /// Underlying shape storage type.
-    type UnderlyingType: ShapeStorage;
+    /// Underlying storage type for the shape.
+    type UnderlyingType: DimSeq;
 
     /// Number of dimensions in the multi-dimensional array.
     const N_DIMS: usize;
@@ -171,7 +182,7 @@ pub struct DynamicShape;
 /// Common trait for array's shape type.
 #[const_trait]
 pub trait Shape {
-    type UnderlyingType: ShapeStorage;
+    type UnderlyingType: DimSeq;
 
     /// Number of dimensions.
     const N_DIMS: Option<usize>;
@@ -249,7 +260,7 @@ impl Shape for DynamicShape {
 }
 
 /// Computes the number of elements in the array given its shape.
-pub const fn calc_n_elems(shape: &[usize]) -> usize {
+pub const fn compute_num_elems(shape: &[usize]) -> usize {
     let mut n_elems = 1;
     let n = shape.len();
     let mut i = 0;
@@ -261,7 +272,7 @@ pub const fn calc_n_elems(shape: &[usize]) -> usize {
 }
 
 /// Computes the strides of the array given its shape and layout.
-pub const fn calc_strides(shape: &[usize], strides: &mut [usize], layout: Layout) {
+pub const fn compute_strides(shape: &[usize], strides: &mut [usize], layout: Layout) {
     let n = shape.len();
     let mut i = 0;
     match layout {
@@ -299,15 +310,15 @@ mod tests {
     #[test]
     fn test_calc_strides() {
         let mut strides = [0; 3];
-        calc_strides(&[2, 3, 4], &mut strides, Layout::RowMajor);
+        compute_strides(&[2, 3, 4], &mut strides, Layout::RowMajor);
         assert_eq!(strides, [12, 4, 1]);
-        calc_strides(&[3, 4, 2], &mut strides, Layout::ColumnMajor);
+        compute_strides(&[3, 4, 2], &mut strides, Layout::ColumnMajor);
         assert_eq!(strides, [1, 3, 12]);
     }
 
     #[test]
     fn test_n_elems() {
-        assert_eq!(calc_n_elems(&[2, 3, 4]), 24);
-        assert_eq!(calc_n_elems(&[3, 4, 2]), 24);
+        assert_eq!(compute_num_elems(&[2, 3, 4]), 24);
+        assert_eq!(compute_num_elems(&[3, 4, 2]), 24);
     }
 }

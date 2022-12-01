@@ -8,6 +8,8 @@ use core::{
 pub struct DynSized<A>(pub(crate) Vec<A>);
 
 impl<A> Sealed for DynSized<A> {}
+impl<'a, A> Sealed for &'a DynSized<A> {}
+impl<'a, A> Sealed for &'a mut DynSized<A> {}
 
 impl<A: Clone> Clone for DynSized<A> {
     fn clone(&self) -> Self {
@@ -31,7 +33,35 @@ unsafe impl<A> DataRaw for DynSized<A> {
     }
 }
 
+unsafe impl<'a, A> DataRaw for &'a DynSized<A> {
+    type Elem = A;
+
+    fn as_ptr(&self) -> *const Self::Elem {
+        self.0.as_ptr()
+    }
+}
+
+unsafe impl<'a, A> DataRaw for &'a mut DynSized<A> {
+    type Elem = A;
+
+    fn as_ptr(&self) -> *const Self::Elem {
+        self.0.as_ptr()
+    }
+}
+
 unsafe impl<A> Data for DynSized<A> {
+    fn as_slice(&self) -> &[Self::Elem] {
+        &self.0
+    }
+}
+
+unsafe impl<'a, A> Data for &'a DynSized<A> {
+    fn as_slice(&self) -> &[Self::Elem] {
+        &self.0
+    }
+}
+
+unsafe impl<'a, A> Data for &'a mut DynSized<A> {
     fn as_slice(&self) -> &[Self::Elem] {
         &self.0
     }
@@ -43,11 +73,24 @@ unsafe impl<A> DataRawMut for DynSized<A> {
     }
 }
 
+unsafe impl<'a, A> DataRawMut for &'a mut DynSized<A> {
+    fn as_mut_ptr(&mut self) -> *mut Self::Elem {
+        self.0.as_mut_ptr()
+    }
+}
+
 unsafe impl<A> DataMut for DynSized<A> {
     fn as_mut_slice(&mut self) -> &mut [Self::Elem] {
         &mut self.0
     }
 }
+
+unsafe impl<'a, A> DataMut for &'a mut DynSized<A> {
+    fn as_mut_slice(&mut self) -> &mut [Self::Elem] {
+        &mut self.0
+    }
+}
+
 
 impl<A: Debug> Debug for DynSized<A> {
     #[inline]
@@ -92,8 +135,8 @@ mod tests {
 
     #[test]
     fn debug_display() {
-        let storage = DynSized(alloc::vec![1, 2, 3]);
-        assert_eq!(alloc::format!("{:?}", storage), "DynSized([1, 2, 3])");
-        assert_eq!(alloc::format!("{}", storage), "[1, 2, 3]");
+        let storage = DynSized(vec![1, 2, 3]);
+        assert_eq!(format!("{:?}", storage), "DynSized([1, 2, 3])");
+        assert_eq!(format!("{}", storage), "[1, 2, 3]");
     }
 }
