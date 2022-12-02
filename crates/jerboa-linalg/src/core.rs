@@ -33,7 +33,7 @@ where
     pub(crate) layout: Layout,
 
     /// The marker for the layout.
-    pub(crate) _marker: std::marker::PhantomData<(D, L, S)>,
+    pub(crate) marker: std::marker::PhantomData<(D, L, S)>,
 }
 
 impl<D, S, L> ArrCore<D, S, L>
@@ -61,7 +61,7 @@ where
             shape,
             strides,
             layout,
-            _marker: std::marker::PhantomData,
+            marker: std::marker::PhantomData,
         }
     }
 }
@@ -117,10 +117,18 @@ impl<D, S, L> Clone for ArrCore<D, S, L>
             shape: self.shape.clone(),
             strides: self.strides.clone(),
             layout: self.layout,
-            _marker: std::marker::PhantomData,
+            marker: std::marker::PhantomData,
         }
     }
 }
+
+impl<D, S, L> Copy for ArrCore<D, S, L>
+    where D: DataCopy,
+          L: TLayout,
+          S: Shape,
+          S::UnderlyingType: Copy,
+          D::Elem: Copy,
+{ }
 
 impl<D, S, L> Debug for ArrCore<D, S, L>
 where
@@ -208,7 +216,7 @@ mod tests {
             shape: <s!(4, 4) as Shape>::shape(),
             strides: <s!(4, 4) as Shape>::row_major_strides(),
             layout: Layout::RowMajor,
-            _marker: Default::default(),
+            marker: Default::default(),
         };
 
         let b: ArrCore<FixedSized<u32, 16>, s!(4, 4)> = ArrCore {
@@ -216,7 +224,7 @@ mod tests {
             shape: <s!(4, 4) as Shape>::shape(),
             strides: <s!(4, 4) as Shape>::column_major_strides(),
             layout: Layout::ColumnMajor,
-            _marker: Default::default(),
+            marker: Default::default(),
         };
         assert_eq!(a, b);
 
@@ -225,7 +233,7 @@ mod tests {
             shape: <s!(4, 3) as Shape>::shape(),
             strides: <s!(4, 3) as Shape>::row_major_strides(),
             layout: Layout::RowMajor,
-            _marker: Default::default(),
+            marker: Default::default(),
         };
 
         let d: ArrCore<FixedSized<u32, 12>, s!(3, 4)> = ArrCore {
@@ -233,7 +241,7 @@ mod tests {
             shape: <s!(3, 4) as Shape>::shape(),
             strides: <s!(3, 4) as Shape>::column_major_strides(),
             layout: Layout::ColumnMajor,
-            _marker: Default::default(),
+            marker: Default::default(),
         };
 
         assert_eq!(c, d);

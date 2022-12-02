@@ -4,7 +4,7 @@ use core::marker::PhantomData;
 /// Dimension sequence.
 ///
 /// Trait for types that can be used as shape for an array.
-pub trait DimSeq: Clone {
+pub trait DimSeq: Clone + PartialEq + Eq {
     fn as_slice(&self) -> &[usize];
     fn as_slice_mut(&mut self) -> &mut [usize];
 }

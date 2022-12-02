@@ -27,7 +27,7 @@ impl<A, L: TLayout> ArrayDyn<A, L> {
             shape,
             strides,
             layout: L::LAYOUT,
-            _marker: std::marker::PhantomData,
+            marker: std::marker::PhantomData,
         })
     }
 
@@ -46,7 +46,7 @@ impl<A, L: TLayout> ArrayDyn<A, L> {
             shape,
             strides,
             layout: L::LAYOUT,
-            _marker: std::marker::PhantomData,
+            marker: std::marker::PhantomData,
         })
     }
 
@@ -68,7 +68,7 @@ impl<A, L: TLayout> ArrayDyn<A, L> {
             shape,
             strides,
             layout: L::LAYOUT,
-            _marker: std::marker::PhantomData,
+            marker: std::marker::PhantomData,
         })
     }
 
@@ -109,7 +109,7 @@ impl<A, L: TLayout> DerefMut for ArrayDyn<A, L> {
     }
 }
 
-macro impl_array_dyn_binary_op($tr:ident, $mth:ident) {
+macro impl_array_dyn_binary_op($tr:ident, $op:tt, $mth:ident) {
     impl<A, B> $tr<B> for ArrayDyn<A>
     where
         A: $tr<B, Output = A> + Clone,
@@ -118,21 +118,33 @@ macro impl_array_dyn_binary_op($tr:ident, $mth:ident) {
         type Output = Self;
 
         fn $mth(self, rhs: B) -> Self::Output {
-            Self(self.0.$mth(rhs))
+            Self(self.0 $op rhs)
+        }
+    }
+
+    impl<'a, A, B> $tr<B> for &'a ArrayDyn<A>
+        where
+            A: $tr<B, Output = A> + Clone,
+            B: Scalar,
+    {
+        type Output = ArrayDyn<A>;
+
+        fn $mth(self, rhs: B) -> Self::Output {
+            ArrayDyn(&self.0 $op rhs)
         }
     }
 }
 
-impl_array_dyn_binary_op!(Add, add);
-impl_array_dyn_binary_op!(Sub, sub);
-impl_array_dyn_binary_op!(Mul, mul);
-impl_array_dyn_binary_op!(Div, div);
-impl_array_dyn_binary_op!(Rem, rem);
-impl_array_dyn_binary_op!(BitAnd, bitand);
-impl_array_dyn_binary_op!(BitOr, bitor);
-impl_array_dyn_binary_op!(BitXor, bitxor);
-impl_array_dyn_binary_op!(Shl, shl);
-impl_array_dyn_binary_op!(Shr, shr);
+impl_array_dyn_binary_op!(Add, +, add);
+impl_array_dyn_binary_op!(Sub, -, sub);
+impl_array_dyn_binary_op!(Mul, *, mul);
+impl_array_dyn_binary_op!(Div, /, div);
+impl_array_dyn_binary_op!(Rem, %, rem);
+impl_array_dyn_binary_op!(BitAnd, &, bitand);
+impl_array_dyn_binary_op!(BitOr, |, bitor);
+impl_array_dyn_binary_op!(BitXor, ^, bitxor);
+impl_array_dyn_binary_op!(Shl, <<, shl);
+impl_array_dyn_binary_op!(Shr, >>, shr);
 
 #[cfg(test)]
 mod tests {

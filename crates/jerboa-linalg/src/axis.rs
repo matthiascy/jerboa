@@ -71,29 +71,29 @@ impl<T> IndexMut<Axis3> for [T] {
 mod test {
     use super::Axis3;
     // use crate::vector::vec3;
-    use quickcheck::quickcheck;
+    // use quickcheck::quickcheck;
 
-    quickcheck! {
-        fn axis_indexing_check_array(a: u32, b: u32, c: u32) -> bool {
-            let max = u32::MAX / 2;
-            let arr = [a % max, b % max, c % max, 1, 2];
+    // quickcheck! {
+    //     fn axis_indexing_check_array(a: u32, b: u32, c: u32) -> bool {
+    //         let max = u32::MAX / 2;
+    //         let arr = [a % max, b % max, c % max, 1, 2];
 
-            arr[0] == arr[Axis3::X] && arr[1] == arr[Axis3::Y] && arr[2] == arr[Axis3::Z]
-        }
-    }
+    //         arr[0] == arr[Axis3::X] && arr[1] == arr[Axis3::Y] && arr[2] == arr[Axis3::Z]
+    //     }
+    // }
 
-    quickcheck! {
-        fn axis_indexing_check_array_mut(a: u32, b: u32, c: u32, d: u32) -> bool {
-            let max = u32::MAX / 2;
-            let mut arr = [a % max, b % max, c % max, d % max, 2];
+    // quickcheck! {
+    //     fn axis_indexing_check_array_mut(a: u32, b: u32, c: u32, d: u32) -> bool {
+    //         let max = u32::MAX / 2;
+    //         let mut arr = [a % max, b % max, c % max, d % max, 2];
 
-            arr[Axis3::X] = a / max;
-            arr[Axis3::Y] = b / max;
-            arr[Axis3::Z] = c / max;
+    //         arr[Axis3::X] = a / max;
+    //         arr[Axis3::Y] = b / max;
+    //         arr[Axis3::Z] = c / max;
 
-            arr[0] == arr[Axis3::X] && arr[1] == arr[Axis3::Y] && arr[2] == arr[Axis3::Z]
-        }
-    }
+    //         arr[0] == arr[Axis3::X] && arr[1] == arr[Axis3::Y] && arr[2] == arr[Axis3::Z]
+    //     }
+    // }
 
     // quickcheck! {
     //     fn axis_indexing_check_vec(a: u32, b: u32, c: u32) -> bool {

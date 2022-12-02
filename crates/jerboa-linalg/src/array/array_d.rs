@@ -22,7 +22,7 @@ where
             shape: <S as CShape>::SHAPE,
             strides,
             layout: L::LAYOUT,
-            _marker: core::marker::PhantomData,
+            marker: core::marker::PhantomData,
         })
     }
 }
@@ -74,7 +74,7 @@ mod ops {
         }
     }
 
-    macro impl_array_d_binary_op($tr:ident, $mth:ident) {
+    macro impl_array_d_binary_op($tr:ident, $op:tt, $mth:ident) {
         impl<A, B, S, L> $tr<B> for ArrayD<A, S, L>
         where
             A: $tr<B, Output = A> + Clone,
@@ -90,7 +90,7 @@ mod ops {
             }
         }
 
-        impl<'a, A, B, S, L> $tr<B> for &'a Array<A, S, L>
+        impl<'a, A, B, S, L> $tr<B> for &'a ArrayD<A, S, L>
             where
                 A: $tr<B, Output = A> + Clone,
                 B: Scalar,
@@ -98,24 +98,24 @@ mod ops {
                 S: CShape,
                 [(); <S as CShape>::N_ELEMS]:,
         {
-            type Output = Array<A, S, L>;
+            type Output = ArrayD<A, S, L>;
 
             fn $mth(self, rhs: B) -> Self::Output {
-                Array::<A, S, L>(&self.0 $op rhs)
+                ArrayD::<A, S, L>(&self.0 $op rhs)
             }
         }
     }
 
-    impl_array_d_binary_op!(Add, add);
-    impl_array_d_binary_op!(Sub, sub);
-    impl_array_d_binary_op!(Mul, mul);
-    impl_array_d_binary_op!(Div, div);
-    impl_array_d_binary_op!(Rem, rem);
-    impl_array_d_binary_op!(BitAnd, bitand);
-    impl_array_d_binary_op!(BitOr, bitor);
-    impl_array_d_binary_op!(BitXor, bitxor);
-    impl_array_d_binary_op!(Shl, shl);
-    impl_array_d_binary_op!(Shr, shr);
+    impl_array_d_binary_op!(Add, +, add);
+    impl_array_d_binary_op!(Sub, -, sub);
+    impl_array_d_binary_op!(Mul, *, mul);
+    impl_array_d_binary_op!(Div, /, div);
+    impl_array_d_binary_op!(Rem, %, rem);
+    impl_array_d_binary_op!(BitAnd, &, bitand);
+    impl_array_d_binary_op!(BitOr, |, bitor);
+    impl_array_d_binary_op!(BitXor, ^, bitxor);
+    impl_array_d_binary_op!(Shl, <<, shl);
+    impl_array_d_binary_op!(Shr, >>, shr);
 }
 
 pub use ops::*;

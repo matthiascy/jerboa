@@ -1,4 +1,4 @@
-use crate::core::{ArrCore, DataMut, DataRawMut, DataClone, TLayout, Scalar, Shape};
+use crate::core::{ArrCore, DataRawMut, DataClone, TLayout, Scalar, Shape};
 use core::ops::{Add, BitAnd, BitOr, BitXor, Div, Mul, Rem, Shl, Shr, Sub};
 
 // todo:
@@ -53,7 +53,7 @@ macro impl_binary_op($tr:ident, $op:tt, $mth:ident) {
                 shape: self.shape.clone(),
                 strides: self.strides.clone(),
                 layout: self.layout.clone(),
-                _marker: core::marker::PhantomData,
+                marker: core::marker::PhantomData,
             }
         }
     }

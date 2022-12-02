@@ -27,7 +27,7 @@ pub enum Layout {
 }
 
 // !!! workarounds for incomplete feature: adt_const_params
-pub trait TLayout: Sized {
+pub trait TLayout: Sized + Copy + Clone {
     const LAYOUT: Layout;
 }
 
@@ -79,6 +79,10 @@ pub unsafe trait DataMut: Data + DataRawMut {
 pub trait DataClone: Data + DataMut + Clone {}
 
 impl<T: Clone> DataClone for T where T: Data + DataMut {}
+
+pub trait DataCopy: DataClone + Copy {}
+
+impl<T: Copy> DataCopy for T where T: DataClone {}
 
 pub(crate) fn display_slice<T: core::fmt::Display>(
     f: &mut core::fmt::Formatter<'_>,
