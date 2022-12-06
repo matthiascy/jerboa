@@ -1,4 +1,4 @@
-use crate::core::sealed::Sealed;
+use crate::core::Sealed;
 
 // Data is always stored contiguously in memory, ordering only affects how the
 // data is interpreted (i.e. the shape and strides).
@@ -44,14 +44,39 @@ impl TLayout for ColumnMajor {
     const LAYOUT: Layout = Layout::ColumnMajor;
 }
 
+/// Trait to obtain the decayed type of a type.
+/// This is used to remove references and constness from a type.
+#[const_trait]
+pub trait Decay {
+    type Type;
+}
+
 /// Trait providing raw access to the elements of the storage, implemented by
 /// all storage types.
-pub unsafe trait DataRaw: Sized + Sealed {
+pub unsafe trait DataRaw: Sized + Decay + Sealed {
     /// The type of the elements stored in the storage.
     type Elem;
 
     /// Get a pointer to the first element of the storage.
     fn as_ptr(&self) -> *const Self::Elem;
+
+    /// Allocate a new storage given required capacity.
+    ///
+    /// The storage may be allocated on the heap or on the stack depending
+    /// on the concrete data container. The required size of the storage must
+    /// match the shape of array.
+    ///
+    /// Unsafe because the caller must ensure that the storage is properly
+    /// initialized after the call. Then, the storage will be dropped
+    /// automatically when it goes out of scope.
+    ///
+    /// # Safety
+    ///
+    /// The storage is uninitialized [`MaybeUninit`]. The caller must initialize
+    /// it before using it. Please use `ptr::write` or `ptr::copy` to
+    /// initialize the storage elements without dropping the uninitialized
+    /// values.
+    unsafe fn alloc_uninit(len: usize) -> <Self as Decay>::Type;
 }
 
 /// Trait providing slice access to the elements of the storage, implemented by

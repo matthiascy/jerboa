@@ -4,6 +4,8 @@ use core::{
     ops::Deref,
 };
 
+use super::Decay;
+
 /// Dynamically-sized array storage.
 pub struct DynSized<A>(pub(crate) Vec<A>);
 
@@ -25,11 +27,27 @@ impl<A: PartialEq> PartialEq for DynSized<A> {
 
 impl<A: PartialEq + Eq> Eq for DynSized<A> {}
 
+impl<A> Decay for DynSized<A> {
+    type Type = DynSized<A>;
+}
+
+impl<'a, A> Decay for &'a DynSized<A> {
+    type Type = DynSized<A>;
+}
+
+impl<'a, A> Decay for &'a mut DynSized<A> {
+    type Type = DynSized<A>;
+}
+
 unsafe impl<A> DataRaw for DynSized<A> {
     type Elem = A;
 
     fn as_ptr(&self) -> *const Self::Elem {
         self.0.as_ptr()
+    }
+
+    unsafe fn alloc_uninit(len: usize) -> Self {
+        Self(Vec::with_capacity(len))
     }
 }
 
@@ -39,6 +57,10 @@ unsafe impl<'a, A> DataRaw for &'a DynSized<A> {
     fn as_ptr(&self) -> *const Self::Elem {
         self.0.as_ptr()
     }
+
+    unsafe fn alloc_uninit(len: usize) -> <Self as Decay>::Type {
+        DynSized(Vec::with_capacity(len))
+    }
 }
 
 unsafe impl<'a, A> DataRaw for &'a mut DynSized<A> {
@@ -46,6 +68,10 @@ unsafe impl<'a, A> DataRaw for &'a mut DynSized<A> {
 
     fn as_ptr(&self) -> *const Self::Elem {
         self.0.as_ptr()
+    }
+
+    unsafe fn alloc_uninit(len: usize) -> <Self as Decay>::Type {
+        DynSized(Vec::with_capacity(len))
     }
 }
 
@@ -90,7 +116,6 @@ unsafe impl<'a, A> DataMut for &'a mut DynSized<A> {
         &mut self.0
     }
 }
-
 
 impl<A: Debug> Debug for DynSized<A> {
     #[inline]

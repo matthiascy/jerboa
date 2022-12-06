@@ -1,4 +1,4 @@
-use crate::core::{display_slice, Data, DataMut, DataRaw, DataRawMut, Sealed};
+use crate::core::{display_slice, Data, DataMut, DataRaw, DataRawMut, Decay, Sealed};
 use core::fmt::{Debug, Display, Formatter};
 
 /// Fixed-sized array storage.
@@ -25,11 +25,28 @@ impl<A: PartialEq, const N: usize> PartialEq for FixedSized<A, N> {
 
 impl<A: PartialEq + Eq, const N: usize> Eq for FixedSized<A, N> {}
 
+impl<A, const N: usize> Decay for FixedSized<A, N> {
+    type Type = Self;
+}
+
+impl<'a, A, const N: usize> Decay for &'a FixedSized<A, N> {
+    type Type = FixedSized<A, N>;
+}
+
+impl<'a, A, const N: usize> Decay for &'a mut FixedSized<A, N> {
+    type Type = FixedSized<A, N>;
+}
+
 unsafe impl<A, const N: usize> DataRaw for FixedSized<A, N> {
     type Elem = A;
 
     fn as_ptr(&self) -> *const Self::Elem {
         self.0.as_ptr()
+    }
+
+    unsafe fn alloc_uninit(len: usize) -> <Self as Decay>::Type {
+        debug_assert_eq!(len, N);
+        Self(core::mem::MaybeUninit::<[A; N]>::uninit().assume_init())
     }
 }
 
@@ -39,6 +56,11 @@ unsafe impl<'a, A, const N: usize> DataRaw for &'a FixedSized<A, N> {
     fn as_ptr(&self) -> *const Self::Elem {
         self.0.as_ptr()
     }
+
+    unsafe fn alloc_uninit(len: usize) -> <Self as Decay>::Type {
+        debug_assert_eq!(len, N);
+        FixedSized(core::mem::MaybeUninit::<[A; N]>::uninit().assume_init())
+    }
 }
 
 unsafe impl<'a, A, const N: usize> DataRaw for &'a mut FixedSized<A, N> {
@@ -46,6 +68,11 @@ unsafe impl<'a, A, const N: usize> DataRaw for &'a mut FixedSized<A, N> {
 
     fn as_ptr(&self) -> *const Self::Elem {
         self.0.as_ptr()
+    }
+
+    unsafe fn alloc_uninit(len: usize) -> <Self as Decay>::Type {
+        debug_assert_eq!(len, N);
+        FixedSized(core::mem::MaybeUninit::<[A; N]>::uninit().assume_init())
     }
 }
 
@@ -124,5 +151,14 @@ mod tests {
         let a = FixedSized([1, 2, 3]);
         assert_eq!(format!("{:?}", a), "FixedSized([1, 2, 3])");
         assert_eq!(format!("{}", a), "[1, 2, 3]");
+    }
+
+    #[test]
+    fn alloc_uninit() {
+        let mut a = unsafe { FixedSized::<Box<u32>, 3>::alloc_uninit(3) };
+        for i in 0..3 {
+            unsafe { a.as_mut_ptr().add(i).write(Box::new(i as u32)) };
+        }
+        assert_eq!(a.as_slice(), &[Box::new(0), Box::new(1), Box::new(2)]);
     }
 }

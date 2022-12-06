@@ -1,10 +1,10 @@
-mod arith;
+mod ops;
 mod data;
 mod index;
 mod sealed;
 mod shape;
 
-pub(crate) use arith::*;
+pub(crate) use ops::*;
 pub use data::*;
 pub(crate) use sealed::Sealed;
 pub use shape::*;
@@ -48,11 +48,12 @@ where
     /// Rarely used directly. Only used inside the crate for testing.
     pub fn new(shape: S::UnderlyingType, data: D, layout: Layout) -> Self {
         // Make sure the data is the right size.
-        assert!(
-            data.as_slice().len() == compute_num_elems(shape.as_slice()),
-            "data is the wrong size"
+        assert_eq!(
+            data.as_slice().len(),
+            compute_num_elems(shape.as_slice()),
+            "data size doesn't match shape"
         );
-        assert!(L::LAYOUT == layout, "layouts don't match");
+        assert_eq!(L::LAYOUT, layout, "layouts don't match");
 
         let mut strides = shape.clone();
         compute_strides(shape.as_slice(), strides.as_slice_mut(), layout);
@@ -107,9 +108,10 @@ where
 }
 
 impl<D, S, L> Clone for ArrCore<D, S, L>
-    where D: DataClone,
-          L: TLayout,
-          S: Shape,
+where
+    D: DataClone,
+    L: TLayout,
+    S: Shape,
 {
     fn clone(&self) -> Self {
         Self {
@@ -123,12 +125,14 @@ impl<D, S, L> Clone for ArrCore<D, S, L>
 }
 
 impl<D, S, L> Copy for ArrCore<D, S, L>
-    where D: DataCopy,
-          L: TLayout,
-          S: Shape,
-          S::UnderlyingType: Copy,
-          D::Elem: Copy,
-{ }
+where
+    D: DataCopy,
+    L: TLayout,
+    S: Shape,
+    S::UnderlyingType: Copy,
+    D::Elem: Copy,
+{
+}
 
 impl<D, S, L> Debug for ArrCore<D, S, L>
 where
@@ -198,9 +202,8 @@ where
 mod tests {
     use super::*;
 
-
     #[test]
-    fn test_arr_raw_new() {
+    fn test_arr_core_new() {
         let a: ArrCore<FixedSized<i32, 6>, s!(2, 3), RowMajor> =
             ArrCore::new([2, 3], FixedSized([1, 2, 3, 4, 5, 6]), Layout::RowMajor);
         assert_eq!(a.shape(), &[2, 3]);
@@ -210,7 +213,7 @@ mod tests {
     }
 
     #[test]
-    fn test_arr_raw_eq() {
+    fn test_arr_core_eq() {
         let a: ArrCore<FixedSized<u32, 16>, s!(4, 4)> = ArrCore {
             data: FixedSized([1; 16]),
             shape: <s!(4, 4) as Shape>::shape(),
