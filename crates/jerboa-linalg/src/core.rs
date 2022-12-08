@@ -1,15 +1,15 @@
-mod ops;
 mod data;
 mod index;
-mod sealed;
+mod ops;
 mod shape;
 
-pub(crate) use ops::*;
 pub use data::*;
-pub(crate) use sealed::Sealed;
+pub(crate) use ops::*;
 pub use shape::*;
 
 use core::fmt::{Debug, Error, Formatter};
+
+pub trait Sealed {}
 
 /// A n-dimensional array.
 pub struct ArrCore<D, S, L = RowMajor>
@@ -232,7 +232,7 @@ mod tests {
         assert_eq!(a, b);
 
         let c: ArrCore<FixedSized<u32, 12>, s!(4, 3)> = ArrCore {
-            data: FixedSized([1; 12]),
+            data: FixedSized([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
             shape: <s!(4, 3) as Shape>::shape(),
             strides: <s!(4, 3) as Shape>::row_major_strides(),
             layout: Layout::RowMajor,
@@ -240,12 +240,15 @@ mod tests {
         };
 
         let d: ArrCore<FixedSized<u32, 12>, s!(3, 4)> = ArrCore {
-            data: FixedSized([1; 12]),
+            data: FixedSized([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
             shape: <s!(3, 4) as Shape>::shape(),
             strides: <s!(3, 4) as Shape>::column_major_strides(),
             layout: Layout::ColumnMajor,
             marker: Default::default(),
         };
+
+        println!("{:?}", c);
+        println!("{:?}", d);
 
         assert_eq!(c, d);
         assert_ne!(a, c);

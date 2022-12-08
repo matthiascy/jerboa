@@ -177,6 +177,118 @@ mod ops {
         }
     }
 
+    impl<A, S, L> Add<Array<A, S, L>> for Array<A, S, L>
+    where
+        A: Add<A, Output = A>,
+        L: TLayout,
+        S: CShape,
+        [(); <S as CShape>::N_ELEMS]:,
+    {
+        type Output = Self;
+
+        fn add(self, rhs: Self) -> Self::Output {
+            Self(self.0 + rhs.0)
+        }
+    }
+
+    impl<'a, A, S, L> Add<Array<A, S, L>> for &'a Array<A, S, L>
+    where
+        A: Add<A, Output = A> + Clone,
+        L: TLayout,
+        S: CShape,
+        [(); <S as CShape>::N_ELEMS]:,
+    {
+        type Output = Array<A, S, L>;
+
+        fn add(self, rhs: Array<A, S, L>) -> Self::Output {
+            Array(&self.0 + rhs.0)
+        }
+    }
+
+    impl<'a, A, S, L> Add<&'a Array<A, S, L>> for Array<A, S, L>
+    where
+        A: Add<A, Output = A>,
+        L: TLayout,
+        S: CShape,
+        [(); <S as CShape>::N_ELEMS]:,
+    {
+        type Output = Self;
+
+        fn add(self, rhs: &'a Array<A, S, L>) -> Self::Output {
+            Array(self.0 + &rhs.0)
+        }
+    }
+
+    impl<'a, 'b, A, S, L> Add<&'b Array<A, S, L>> for &'a Array<A, S, L>
+    where
+        A: Add<A, Output = A> + Clone,
+        L: TLayout,
+        S: CShape,
+        [(); <S as CShape>::N_ELEMS]:,
+    {
+        type Output = Array<A, S, L>;
+
+        fn add(self, rhs: &'b Array<A, S, L>) -> Self::Output {
+            Array(&self.0 + &rhs.0)
+        }
+    }
+
+    // impl<A, S0, S1, L0, L1> Add<Array<A, S1, L1>> for Array<A, S0, L0>
+    // where
+    //     A: Add<Output = A> + Clone,
+    //     L0: TLayout,
+    //     L1: TLayout,
+    //     S0: CShape,
+    //     S1: CShape,
+    //     [(); <S0 as CShape>::N_ELEMS]:,
+    //     [(); <S1 as CShape>::N_ELEMS]:,
+    // {
+    //     type Output = ;
+
+    //     default fn add(self, rhs: Array<A, S1, L1>) -> Self::Output {
+
+    //     }
+    // }
+
+    // impl<A, S, L0, L1> Add<Array<A, S, L1>> for Array<A, S, L0>
+    // where A: Add<Output = A>,
+    //       L0: TLayout,
+    //       L1: TLayout,
+    //       S: CShape,
+    //       [(); <S as CShape>::N_ELEMS]:,
+    // {
+    //     type Output = Array<A, S, L0>;
+
+    //     fn add(self, rhs: Array<A, S, L1>) -> Self::Output {
+    //         if self.layout() == rhs.layout() {
+    //             Array(self.0 + rhs.0)
+    //         } else {
+    //             Array(self.0 + rhs.0)
+    //         }
+    //     }
+    // }
+
+    // impl<A, S, L> Add<Array<A, S, L>> for Array<A, S, L>
+    // where
+    //     A: Add<Output = A>,
+    //     L: TLayout,
+    //     S: CShape,
+    //     [(); <S as CShape>::N_ELEMS]:,
+    // {
+    //     type Output = Array<A, S, L>;
+
+    //     fn add(self, rhs: Array<A, S, L>) -> Self::Output {
+    //         let n = <S as CShape>::N_ELEMS;
+    //         let mut result = self;
+    //         let mut i = 0;
+    //         while i < n {
+    //             result.0.data[i] += rhs.0.data[i];
+    //             i += 1;
+    //         }
+    //         result
+    //     }
+    // }
+
     impl_array_s_binary_op!(Add, +, add);
     impl_array_s_binary_op!(Sub, -, sub);
     impl_array_s_binary_op!(Mul, *, mul);
@@ -331,6 +443,7 @@ mod tests {
     use crate::core::{s, ColumnMajor};
     use core::ops::Range;
     use proptest::prelude::*;
+    use core::ops::Add;
 
     const HALF_U32: u32 = u32::MAX / 2 - 1;
 
@@ -358,31 +471,41 @@ mod tests {
         prop::array::uniform24(min..max)
     }
 
-    #[derive(Debug)]
-    struct Dummy<T>(Box<(T, T)>);
+    #[derive(Debug, Clone, PartialEq)]
+    struct Dummy(Box<(u32, u32)>);
 
-    impl<T> Dummy<T> {
-        fn new(a: T, b: T) -> Self {
+    impl Dummy {
+        fn new(a: u32, b: u32) -> Self {
             Self(Box::new((a, b)))
         }
     }
 
-    impl<T: Clone> Clone for Dummy<T> {
-        fn clone(&self) -> Self {
-            Self(self.0.clone())
+    impl Drop for Dummy {
+        fn drop(&mut self) {
+            println!("Dropping {:?}, {:?}", self.0.0, self.0.1);
         }
     }
 
-    impl<T: PartialEq> PartialEq for Dummy<T> {
-        fn eq(&self, other: &Self) -> bool {
-            self.0 == other.0
+    impl Add for Dummy {
+        type Output = Self;
+
+        fn add(self, rhs: Self) -> Self::Output {
+            Self(Box::new(((self.0.0 + rhs.0.0), (self.0.1 + rhs.0.1))))
+        }
+    }
+
+    impl Add<u32> for Dummy {
+        type Output = Self;
+
+        fn add(self, rhs: u32) -> Self::Output {
+            Self(Box::new(((self.0.0 + rhs.clone()), (self.0.1 + rhs))))
         }
     }
 
     proptest! {
         #[test]
-        fn new(a in any::<[f32; 12]>()) {
-            let array = Array::<f32, s!(2, 6)>::new(a);
+        fn new(a in any::<[u32; 12]>()) {
+            let array = Array::<u32, s!(2, 6)>::new(a);
             assert_eq!(array.data.0, a);
             assert_eq!(array.shape, [2, 6]);
             assert_eq!(array.shape(), &[2, 6]);
@@ -390,7 +513,7 @@ mod tests {
             let b = [Dummy::new(a[0], a[1]), Dummy::new(a[2], a[3]), Dummy::new(a[4], a[5]),
                      Dummy::new(a[6], a[7]), Dummy::new(a[8], a[9]), Dummy::new(a[10], a[11])];
             let c = b.clone();
-            let array = Array::<Dummy<f32>, s!(2, 3)>::new(b);
+            let array = Array::<Dummy, s!(2, 3)>::new(b);
             assert_eq!(array.data.0, c);
             assert_eq!(array.shape, [2, 3]);
             assert_eq!(array.shape(), &[2, 3]);
@@ -445,6 +568,30 @@ mod tests {
             assert_eq!(array.n_elems(), 16);
         }
 
+        // #[test]
+        // fn add_self(a in array32(0, HALF_U32), b in array32(0, HALF_U32)) {
+        //     let arr0: Array::<u32, s!(4, 8), RowMajor> = Array::from(&a[..]);
+        //     let arr1: Array::<u32, s!(4, 8), RowMajor> = Array::from(&b[..]);
+        //     let arr2 = arr0 + arr1;
+        //     for i in 0..32 {
+        //         assert_eq!(arr2.0.data.0[i], a[i] + b[i]);
+        //     }
+
+        //     let boxed_a = a.clone().chunks_exact(2).map(|x| Dummy(Box::new((x[0], x[1])))).collect::<Vec<_>>();
+        //     let boxed_b = b.clone().chunks_exact(2).map(|x| Dummy(Box::new((x[0], x[1])))).collect::<Vec<_>>();
+
+        //     let arr0: Array::<Dummy<u32>, s!(4, 4), RowMajor> = Array::from(boxed_a.as_slice());
+        //     let arr1: Array::<Dummy<u32>, s!(4, 4), RowMajor> = Array::from(boxed_b.as_slice());
+        //     let arr2 = &arr0 + &arr1;
+        //     let arr3 = &arr0 + arr1.clone();
+        //     // let arr4 = arr0.clone() + &arr1;
+        //     // let arr5 = arr0 + arr1;
+
+        //     assert_eq!(arr2, arr3);
+        //     // assert_eq!(arr2, arr4);
+        //     // assert_eq!(arr2, arr5);
+        // }
+
         #[test]
         fn add_scalar_0(arr in array32::<u32>(0, HALF_U32), b in 0..HALF_U32) {
             let array = Array::<u32, s!(3, 2, 4)>::from(&arr[..]);
@@ -454,8 +601,8 @@ mod tests {
         }
 
         #[test]
-        fn add_scalar_1(arr in array24::<u32>(0, HALF_U32), b in 0..HALF_U32) {
-            let array: Array::<u32, s!(3, 2, 4)> = Array::new(arr);
+        fn add_scalar_1(arr in array32::<u32>(0, HALF_U32), b in 0..HALF_U32) {
+            let array = Array::<u32, s!(3, 2, 4)>::from(&arr[..]);
             let c = &array + b;
             let d = array + b;
             prop_assert_eq!(c, d);
@@ -556,5 +703,25 @@ mod tests {
             Box::new(6),
         ];
         let _arr_1 = Array::<Box<u32>, s!(2, 3)>::from(&b[..]);
+    }
+
+    #[test]
+    fn add_scalar_boxed() {
+        let arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+            .chunks_exact(2).map(|x| Dummy(Box::new((x[0], x[1])))).collect::<Vec<_>>();
+        let b = 2;
+        let array = Array::<Dummy, s!(2, 4)>::from(arr.as_slice());
+
+        println!("0before adding {:?}", array);
+        let c = &array + b;
+        println!("after adding {:?}", c);
+
+        println!("1before adding {:?}", array);
+        let d = array + b;
+        println!("1after adding {:?}", d);
+
+        // for i in 0..8 {
+        //     assert_eq!(&d.0.data.0[i].0, &Box::new((arr[i].0.0 + b, arr[i].0.1 + b)));
+        // }
     }
 }

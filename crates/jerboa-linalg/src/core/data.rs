@@ -44,6 +44,10 @@ impl TLayout for ColumnMajor {
     const LAYOUT: Layout = Layout::ColumnMajor;
 }
 
+
+// todo: merge data traits into one trait with generic parameter?
+// todo: then we can remove the Decay trait?
+
 /// Trait to obtain the decayed type of a type.
 /// This is used to remove references and constness from a type.
 #[const_trait]

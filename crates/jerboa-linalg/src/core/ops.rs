@@ -1,9 +1,8 @@
-use crate::core::{ArrCore, DataClone, DataRawMut, Decay, Shape, TLayout};
+use crate::core::{ArrCore, DataClone, DataRawMut, Decay, Shape, TLayout, DataMut};
 use core::ops::{
     Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Div, DivAssign,
-    Mul, MulAssign, Rem, RemAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign,
+    Mul, MulAssign, Neg, Not, Rem, RemAssign, Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign,
 };
-use std::ops::{Neg, Not};
 
 pub trait Scalar: Clone {}
 
@@ -50,6 +49,10 @@ macro impl_arr_core_scalar_binary_op($tr:ident, $op:tt, $mth:ident, $doc:expr) {
             let n_elems = array.n_elems();
             for i in 0..n_elems {
                 unsafe {
+                    // The value is consumed, we don't need to clone it. As for dropping, the
+                    // corresponding value in array will be overwritten by new value, so it's
+                    // fine to leave the `elem` automatically dropped at the end of the loop;
+                    // it won't be dropped twice.
                     let elem = core::ptr::read(array.data.as_ptr().add(i));
                     core::ptr::write(array.data.as_mut_ptr().add(i), elem $op rhs.clone());
                 }
@@ -84,8 +87,13 @@ macro impl_arr_core_scalar_binary_op($tr:ident, $op:tt, $mth:ident, $doc:expr) {
             let mut i = 0;
             while i < n_elems {
                 unsafe {
+                    // We wan't to keep the original array untouched, so we need to clone the
+                    // element. Besides, the element is directly read from the original memory,
+                    // in other words, it's a copy of the original value, so we don't want it
+                    // to be dropped, otherwise the original value will be dropped.
                     let elem = core::ptr::read(self.data.as_ptr().add(i));
                     core::ptr::write(data.as_mut_ptr().add(i), elem.clone() $op rhs.clone());
+                    core::mem::forget(elem);
                 }
                 i += 1;
             }
@@ -110,6 +118,109 @@ impl_arr_core_scalar_binary_op!(BitOr, |, bitor, "bitwise OR");
 impl_arr_core_scalar_binary_op!(BitXor, ^, bitxor, "bitwise XOR");
 impl_arr_core_scalar_binary_op!(Shl, <<, shl, "left shift");
 impl_arr_core_scalar_binary_op!(Shr, >>, shr, "right shift");
+
+impl<A, D, S, L> Add<ArrCore<D, S, L>> for ArrCore<D, S, L>
+where
+    A: Add<A, Output = A>,
+    D: DataRawMut<Elem = A>,
+    L: TLayout,
+    S: Shape,
+{
+    type Output = ArrCore<D, S, L>;
+
+    fn add(self, rhs: ArrCore<D, S, L>) -> Self::Output {
+        let mut array = self;
+        let n_elems = array.n_elems();
+        for i in 0..n_elems {
+            unsafe {
+                let elem = core::ptr::read(array.data.as_ptr().add(i));
+                let rhs_elem = core::ptr::read(rhs.data.as_ptr().add(i));
+                core::ptr::write(array.data.as_mut_ptr().add(i), elem + rhs_elem);
+            }
+        }
+        array
+    }
+}
+
+impl<'a, A, D, S, L> Add<&'a ArrCore<D, S, L>> for ArrCore<D, S, L>
+where
+    A: Add<A, Output = A>,
+    D: DataRawMut<Elem = A>,
+    L: TLayout,
+    S: Shape,
+{
+    type Output = ArrCore<D, S, L>;
+
+    fn add(self, rhs: &'a ArrCore<D, S, L>) -> Self::Output {
+        let mut array = self;
+        let n_elems = array.n_elems();
+        for i in 0..n_elems {
+            unsafe {
+                let elem = core::ptr::read(array.data.as_ptr().add(i));
+                let rhs_elem = core::ptr::read(rhs.data.as_ptr().add(i));
+                core::ptr::write(array.data.as_mut_ptr().add(i), elem + rhs_elem);
+            }
+        }
+        array
+    }
+}
+
+impl<'a, A, D, S, L> Add<ArrCore<D, S, L>> for &'a ArrCore<D, S, L>
+    where A: Add<A, Output = A> + Clone,
+          D: DataRawMut<Elem = A>,
+          L: TLayout,
+          S: Shape,
+{
+    type Output = ArrCore<D, S, L>;
+
+    fn add(self, rhs: ArrCore<D, S, L>) -> Self::Output {
+        let mut array = rhs;
+        let n_elems = array.n_elems();
+        for i in 0..n_elems {
+            unsafe {
+                let rhs_elem = core::ptr::read(array.data.as_ptr().add(i));
+                let elem = core::ptr::read(self.data.as_ptr().add(i));
+                core::ptr::write(array.data.as_mut_ptr().add(i), elem.clone() + rhs_elem);
+            }
+        }
+        array
+    }
+}
+
+impl<'a, 'b, A, D, S, L> Add<&'b ArrCore<D, S, L>> for &'a ArrCore<D, S, L>
+where
+    A: Add<A, Output = A> + Clone,
+    D: DataRawMut<Elem = A>,
+    <D as Decay>::Type: DataRawMut<Elem = A>,
+    L: TLayout,
+    S: Shape,
+{
+    type Output = ArrCore<<D as Decay>::Type, S, L>;
+
+    fn add(self, rhs: &'b ArrCore<D, S, L>) -> Self::Output {
+        let n_elems = self.n_elems();
+        let mut data = unsafe { D::alloc_uninit(n_elems) };
+        let mut i = 0;
+        while i < n_elems {
+            unsafe {
+                let lhs_elem = core::ptr::read(self.data.as_ptr().add(i));
+                let rhs_elem = core::ptr::read(rhs.data.as_ptr().add(i));
+                core::ptr::write(
+                    data.as_mut_ptr().add(i),
+                    lhs_elem.clone() + rhs_elem.clone(),
+                );
+            }
+            i += 1;
+        }
+        ArrCore {
+            data,
+            shape: self.shape.clone(),
+            strides: self.strides.clone(),
+            layout: self.layout.clone(),
+            marker: core::marker::PhantomData,
+        }
+    }
+}
 
 macro impl_arr_core_scalar_binary_assign_op($tr_assgn:ident, $tr:ident, $tr_op:tt, $mth:ident, $doc:expr) {
     /// Performs element-wise
